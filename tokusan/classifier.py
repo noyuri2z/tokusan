@@ -279,6 +279,8 @@ class JapaneseTextClassifier:
         explain: bool = True,
         num_features: int = 10,
         num_samples: int = 500,
+        use_ai: Optional[bool] = None,
+        fallback_to_template: bool = True,
     ) -> PredictionResult:
         """
         Predict the class of a single text with optional explanation.
@@ -288,6 +290,12 @@ class JapaneseTextClassifier:
             explain: Whether to generate LIME explanation.
             num_features: Number of top features to include in explanation.
             num_samples: Number of samples for LIME perturbation.
+            use_ai: Whether to use Gemini AI for Japanese summary.
+                   None = auto-detect (use AI if GEMINI_API_KEY is set).
+                   True = always use AI (raises error if unavailable).
+                   False = always use template-based summary.
+            fallback_to_template: If True, fall back to template summary
+                                 when AI fails. If False, raise exception.
 
         Returns:
             PredictionResult: Object containing prediction and explanation.
@@ -299,6 +307,9 @@ class JapaneseTextClassifier:
             >>> result = clf.predict("ニュースのテキスト", explain=True)
             >>> print(result.predicted_class)
             >>> print(result.summary_jp)
+            >>>
+            >>> # Force AI interpretation
+            >>> result = clf.predict("テキスト", use_ai=True)
         """
         if not self.is_trained or self._pipeline is None:
             raise RuntimeError(
@@ -330,6 +341,8 @@ class JapaneseTextClassifier:
             probabilities=probabilities,
             class_names=self.class_names,
             explanation=explanation,
+            use_ai=use_ai,
+            fallback_to_template=fallback_to_template,
         )
 
     def predict_batch(
@@ -338,6 +351,8 @@ class JapaneseTextClassifier:
         explain: bool = False,
         num_features: int = 10,
         num_samples: int = 500,
+        use_ai: Optional[bool] = None,
+        fallback_to_template: bool = True,
     ) -> List[PredictionResult]:
         """
         Predict classes for multiple texts.
@@ -347,6 +362,9 @@ class JapaneseTextClassifier:
             explain: Whether to generate LIME explanations (slower).
             num_features: Number of top features for explanations.
             num_samples: Number of samples for LIME perturbation.
+            use_ai: Whether to use Gemini AI for Japanese summaries.
+                   None = auto-detect, True = always use AI, False = use template.
+            fallback_to_template: If True, fall back to template on AI failure.
 
         Returns:
             List of PredictionResult objects.
@@ -388,6 +406,8 @@ class JapaneseTextClassifier:
                 probabilities=probabilities,
                 class_names=self.class_names,
                 explanation=explanation,
+                use_ai=use_ai,
+                fallback_to_template=fallback_to_template,
             ))
 
         return results
@@ -444,6 +464,7 @@ class JapaneseTextClassifier:
             probabilities=probabilities,
             sentences_jp=sentences_jp,
             sentences_en=sentences_en,
+            original_text=text,
         )
 
     def save(self, path: Union[str, Path]) -> None:

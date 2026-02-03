@@ -98,4 +98,4 @@ Points to keep in mind:
 1. Docstring should be one or two sentences, and inline comments should be as concise as possible. 
 2. Avoid writing a code that uses try/except lines.
 3. Do not include emoji anywhere in the code or writing. This project is academic project that might be used for writing academic papers, so keep that in mind. 
-4. Always ask if the Japanese sentence is correct when generating any kind of Japanese sentences for docstrings/comments or output explanation. 
+4. Always ask if the Japanese sentence is correct 1when generating any kind of Japanese sentences for docstrings/comments or output explanation. 

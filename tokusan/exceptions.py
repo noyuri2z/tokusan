@@ -44,3 +44,22 @@ class ExplanationError(TokusanError):
     - Required explanation data is missing
     """
     pass
+
+
+class AIInterpretationError(TokusanError):
+    """
+    Raised when AI-powered interpretation fails.
+
+    This exception is raised when:
+    - GEMINI_API_KEY environment variable is not set
+    - google-generativeai package is not installed
+    - Gemini API call fails (network error, rate limit, etc.)
+    - AI response cannot be parsed
+
+    Example:
+        >>> try:
+        ...     interpretation = interpreter.interpret(...)
+        ... except AIInterpretationError as e:
+        ...     print(f"AI interpretation failed: {e}")
+    """
+    pass

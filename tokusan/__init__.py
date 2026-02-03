@@ -103,7 +103,10 @@ from .explainer import (
 )
 
 # Exceptions
-from .exceptions import TokusanError, TokenizerError, ExplanationError
+from .exceptions import TokusanError, TokenizerError, ExplanationError, AIInterpretationError
+
+# AI interpretation (optional, requires GEMINI_API_KEY)
+from .ai_interpreter import GeminiInterpreter, is_ai_available
 
 # Japanese tokenizer utilities (for advanced users)
 from .japanese import splitter as japanese_splitter
@@ -135,6 +138,10 @@ __all__ = [
     "TokusanError",
     "TokenizerError",
     "ExplanationError",
+    "AIInterpretationError",
+    # AI interpretation
+    "GeminiInterpreter",
+    "is_ai_available",
     # Japanese utilities
     "japanese_splitter",
     "active_japanese_tokenizer",
