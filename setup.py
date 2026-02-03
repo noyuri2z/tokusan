@@ -46,6 +46,9 @@ setup(
             "sudachipy>=0.6.0",
             "sudachidict_core>=20220729",
         ],
+        "ai": [
+            "google-generativeai>=0.3.0",
+        ],
         "dev": [
             "pytest>=6.0",
             "pytest-cov>=2.0",
