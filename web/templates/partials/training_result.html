@@ -1,0 +1,57 @@
+<div class="bg-white rounded-lg shadow p-6">
+    <h2 class="text-xl font-semibold mb-4 flex items-center">
+        <span class="bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center mr-3 text-sm">3</span>
+        Training Complete
+    </h2>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-blue-50 p-4 rounded">
+            <p class="text-sm text-gray-600">Accuracy</p>
+            <p class="text-2xl font-bold text-blue-600">{{ "%.1f"|format(result.accuracy * 100) }}%</p>
+        </div>
+        <div class="bg-gray-50 p-4 rounded">
+            <p class="text-sm text-gray-600">Training Samples</p>
+            <p class="text-2xl font-bold">{{ result.train_size }}</p>
+        </div>
+        <div class="bg-gray-50 p-4 rounded">
+            <p class="text-sm text-gray-600">Test Samples</p>
+            <p class="text-2xl font-bold">{{ result.test_size }}</p>
+        </div>
+        <div class="bg-gray-50 p-4 rounded">
+            <p class="text-sm text-gray-600">Classes</p>
+            <p class="text-lg font-bold">{{ result.class_names | join(', ') }}</p>
+        </div>
+    </div>
+
+    <h3 class="font-semibold mb-2">Per-Class Metrics</h3>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-100">
+                <tr>
+                    <th class="px-4 py-2 text-left">Class</th>
+                    <th class="px-4 py-2 text-right">Precision</th>
+                    <th class="px-4 py-2 text-right">Recall</th>
+                    <th class="px-4 py-2 text-right">F1-Score</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for class_name in result.class_names %}
+                {% if class_name in result.classification_report %}
+                {% set metrics = result.classification_report[class_name] %}
+                <tr class="border-b">
+                    <td class="px-4 py-2">{{ class_name }}</td>
+                    <td class="px-4 py-2 text-right">{{ "%.2f"|format(metrics.precision) }}</td>
+                    <td class="px-4 py-2 text-right">{{ "%.2f"|format(metrics.recall) }}</td>
+                    <td class="px-4 py-2 text-right">{{ "%.2f"|format(metrics['f1-score']) }}</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Show prediction form after training -->
+<div id="predict-section" class="mt-8" hx-swap-oob="innerHTML">
+    {% include "partials/predict_form.html" %}
+</div>

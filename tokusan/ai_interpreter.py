@@ -1,24 +1,4 @@
-"""
-AI-powered interpretation using Google Gemini.
-
-This module provides the GeminiInterpreter class for generating deep,
-interpretive explanations of text classification results in Japanese.
-
-Example:
-    >>> import os
-    >>> os.environ['GEMINI_API_KEY'] = 'your_api_key'
-    >>>
-    >>> from tokusan.ai_interpreter import GeminiInterpreter
-    >>> interpreter = GeminiInterpreter()
-    >>> interpretation = interpreter.interpret(
-    ...     text="ニュース記事のテキスト",
-    ...     predicted_class="Fake",
-    ...     probabilities={"Real": 0.12, "Fake": 0.88},
-    ...     word_weights=[("年", 0.037), ("2020", 0.021)],
-    ...     class_names=["Real", "Fake"]
-    ... )
-    >>> print(interpretation)
-"""
+"""AI-powered interpretation using Google Gemini."""
 
 import os
 from typing import Dict, List, Optional, Tuple
@@ -27,9 +7,9 @@ from .exceptions import AIInterpretationError
 
 
 def _check_gemini_available() -> bool:
-    """Check if google-generativeai package is available."""
+    """Check if google-genai package is available."""
     try:
-        import google.generativeai
+        from google import genai
         return True
     except ImportError:
         return False
@@ -37,43 +17,27 @@ def _check_gemini_available() -> bool:
 
 class GeminiInterpreter:
     """
-    Generate AI-powered interpretations using Google Gemini.
-
-    This class uses the Gemini API to analyze classification results
-    and generate human-readable explanations in Japanese that explain
-    WHY certain words influenced the classification.
+    Generate AI-powered interpretations of classification results using Google Gemini.
 
     Attributes:
         model_name: Name of the Gemini model to use.
-
-    Example:
-        >>> interpreter = GeminiInterpreter()
-        >>> result = interpreter.interpret(
-        ...     text="記事のテキスト",
-        ...     predicted_class="Fake",
-        ...     probabilities={"Real": 0.1, "Fake": 0.9},
-        ...     word_weights=[("年", 0.05)],
-        ...     class_names=["Real", "Fake"]
-        ... )
     """
 
-    def __init__(self, model_name: str = "gemini-1.5-flash"):
+    def __init__(self, model_name: str = "gemini-2.5-flash"):
         """
         Initialize the Gemini interpreter.
 
         Args:
-            model_name: Gemini model to use. Default is 'gemini-1.5-flash'
-                       which is fast and works well with the free tier.
+            model_name: Gemini model to use.
 
         Raises:
-            AIInterpretationError: If GEMINI_API_KEY is not set or
-                                  google-generativeai is not installed.
+            AIInterpretationError: If GEMINI_API_KEY is not set or google-genai is not installed.
         """
         # Check if package is available
         if not _check_gemini_available():
             raise AIInterpretationError(
-                "google-generativeai package is not installed. "
-                "Install it with: pip install google-generativeai"
+                "google-genai package is not installed. "
+                "Install it with: pip install google-genai"
             )
 
         # Get API key from environment
@@ -85,15 +49,14 @@ class GeminiInterpreter:
             )
 
         self.model_name = model_name
-        self._model = None
+        self._client = None
 
-    def _get_model(self):
-        """Lazily initialize the Gemini model."""
-        if self._model is None:
-            import google.generativeai as genai
-            genai.configure(api_key=self.api_key)
-            self._model = genai.GenerativeModel(self.model_name)
-        return self._model
+    def _get_client(self):
+        """Lazily initialize the Gemini client."""
+        if self._client is None:
+            from google import genai
+            self._client = genai.Client(api_key=self.api_key)
+        return self._client
 
     def _build_prompt(
         self,
@@ -103,19 +66,7 @@ class GeminiInterpreter:
         word_weights: List[Tuple[str, float]],
         class_names: List[str],
     ) -> str:
-        """
-        Build the prompt for Gemini.
-
-        Args:
-            text: The original input text that was classified.
-            predicted_class: The predicted class name.
-            probabilities: Dict mapping class names to probabilities.
-            word_weights: List of (word, weight) tuples from LIME.
-            class_names: List of all class names.
-
-        Returns:
-            str: The formatted prompt for Gemini.
-        """
+        """Build the prompt for Gemini."""
         # Format probabilities
         prob_str = ", ".join(
             f"{name}: {prob:.1%}" for name, prob in probabilities.items()
@@ -158,7 +109,7 @@ class GeminiInterpreter:
 2. 重みの高い単語（正負両方）を分析し、なぜそれらの単語がこの分類に影響したのかを解釈してください
 3. 単語の組み合わせや文脈も考慮して、総合的な判定理由を説明してください
 4. 専門用語を避け、一般の人にも分かりやすい日本語で説明してください
-5. 箇条書きを使用して読みやすくしてください
+5. 段落分けで読みやすくしてください（マークダウン記号や*、#、-などの記号は使用しないでください）
 
 日本語で回答してください。"""
 
@@ -175,34 +126,21 @@ class GeminiInterpreter:
         """
         Generate a Japanese interpretation of the classification result.
 
-        This method sends the classification data to Gemini and returns
-        a human-readable explanation of why the text was classified
-        the way it was.
-
         Args:
             text: The original input text that was classified.
-            predicted_class: The predicted class name (e.g., "Fake").
+            predicted_class: The predicted class name.
             probabilities: Dict mapping class names to probabilities.
             word_weights: List of (word, weight) tuples from LIME explanation.
             class_names: List of all class names.
 
         Returns:
-            str: Japanese interpretation explaining the classification.
+            Japanese interpretation explaining the classification.
 
         Raises:
             AIInterpretationError: If the API call fails.
-
-        Example:
-            >>> interpretation = interpreter.interpret(
-            ...     text="政府が新政策を発表",
-            ...     predicted_class="Real",
-            ...     probabilities={"Real": 0.85, "Fake": 0.15},
-            ...     word_weights=[("政府", 0.12), ("発表", 0.08)],
-            ...     class_names=["Real", "Fake"]
-            ... )
         """
         try:
-            model = self._get_model()
+            client = self._get_client()
             prompt = self._build_prompt(
                 text=text,
                 predicted_class=predicted_class,
@@ -211,7 +149,10 @@ class GeminiInterpreter:
                 class_names=class_names,
             )
 
-            response = model.generate_content(prompt)
+            response = client.models.generate_content(
+                model=self.model_name,
+                contents=prompt,
+            )
             return response.text
 
         except Exception as e:
@@ -224,18 +165,8 @@ def is_ai_available() -> bool:
     """
     Check if AI interpretation is available.
 
-    Returns True if:
-    1. google-generativeai package is installed
-    2. GEMINI_API_KEY environment variable is set
-
     Returns:
-        bool: True if AI interpretation can be used.
-
-    Example:
-        >>> if is_ai_available():
-        ...     interpreter = GeminiInterpreter()
-        ... else:
-        ...     print("AI not available, using template summaries")
+        True if google-genai is installed and GEMINI_API_KEY is set.
     """
     if not _check_gemini_available():
         return False
