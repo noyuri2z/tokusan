@@ -1,57 +1,59 @@
-<div class="bg-white rounded-lg shadow p-6">
-    <h2 class="text-xl font-semibold mb-4 flex items-center">
-        <span class="bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center mr-3 text-sm">3</span>
-        Training Complete
-    </h2>
+<div class="mb-4 p-4 bg-green-50 rounded border border-green-200">
+    <p class="text-green-800 font-semibold">学習が完了しました！</p>
+</div>
 
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div class="bg-blue-50 p-4 rounded">
-            <p class="text-sm text-gray-600">Accuracy</p>
-            <p class="text-2xl font-bold text-blue-600">{{ "%.1f"|format(result.accuracy * 100) }}%</p>
-        </div>
-        <div class="bg-gray-50 p-4 rounded">
-            <p class="text-sm text-gray-600">Training Samples</p>
-            <p class="text-2xl font-bold">{{ result.train_size }}</p>
-        </div>
-        <div class="bg-gray-50 p-4 rounded">
-            <p class="text-sm text-gray-600">Test Samples</p>
-            <p class="text-2xl font-bold">{{ result.test_size }}</p>
-        </div>
-        <div class="bg-gray-50 p-4 rounded">
-            <p class="text-sm text-gray-600">Classes</p>
-            <p class="text-lg font-bold">{{ result.class_names | join(', ') }}</p>
-        </div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-blue-50 p-4 rounded text-center">
+        <p class="text-sm text-gray-600">正解率</p>
+        <p class="text-2xl font-bold text-blue-600">{{ "%.1f"|format(result.accuracy * 100) }}%</p>
     </div>
-
-    <h3 class="font-semibold mb-2">Per-Class Metrics</h3>
-    <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-            <thead class="bg-gray-100">
-                <tr>
-                    <th class="px-4 py-2 text-left">Class</th>
-                    <th class="px-4 py-2 text-right">Precision</th>
-                    <th class="px-4 py-2 text-right">Recall</th>
-                    <th class="px-4 py-2 text-right">F1-Score</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for class_name in result.class_names %}
-                {% if class_name in result.classification_report %}
-                {% set metrics = result.classification_report[class_name] %}
-                <tr class="border-b">
-                    <td class="px-4 py-2">{{ class_name }}</td>
-                    <td class="px-4 py-2 text-right">{{ "%.2f"|format(metrics.precision) }}</td>
-                    <td class="px-4 py-2 text-right">{{ "%.2f"|format(metrics.recall) }}</td>
-                    <td class="px-4 py-2 text-right">{{ "%.2f"|format(metrics['f1-score']) }}</td>
-                </tr>
-                {% endif %}
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="bg-gray-50 p-4 rounded text-center">
+        <p class="text-sm text-gray-600">学習データ</p>
+        <p class="text-2xl font-bold">{{ result.train_size }}</p>
+    </div>
+    <div class="bg-gray-50 p-4 rounded text-center">
+        <p class="text-sm text-gray-600">テストデータ</p>
+        <p class="text-2xl font-bold">{{ result.test_size }}</p>
+    </div>
+    <div class="bg-gray-50 p-4 rounded text-center">
+        <p class="text-sm text-gray-600">クラス数</p>
+        <p class="text-lg font-bold">{{ result.class_names | length }}</p>
     </div>
 </div>
 
-<!-- Show prediction form after training -->
-<div id="predict-section" class="mt-8" hx-swap-oob="innerHTML">
+<h4 class="font-semibold mb-2 text-sm">クラス別の評価指標</h4>
+<div class="overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-gray-100">
+            <tr>
+                <th class="px-3 py-2 text-left">クラス</th>
+                <th class="px-3 py-2 text-right">適合率</th>
+                <th class="px-3 py-2 text-right">再現率</th>
+                <th class="px-3 py-2 text-right">F1値</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for class_name in result.class_names %}
+            {% if class_name in result.classification_report %}
+            {% set metrics = result.classification_report[class_name] %}
+            <tr class="border-b">
+                <td class="px-3 py-2">{{ class_name }}</td>
+                <td class="px-3 py-2 text-right">{{ "%.2f"|format(metrics.precision) }}</td>
+                <td class="px-3 py-2 text-right">{{ "%.2f"|format(metrics.recall) }}</td>
+                <td class="px-3 py-2 text-right">{{ "%.2f"|format(metrics['f1-score']) }}</td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Update step 4 to show prediction form -->
+<div id="step4-content" hx-swap-oob="innerHTML">
     {% include "partials/predict_form.html" %}
 </div>
+
+<script>
+    document.getElementById('step3-badge').className = 'bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center mr-3 text-sm';
+    document.getElementById('step4-badge').className = 'bg-purple-600 text-white rounded-full w-8 h-8 flex items-center justify-center mr-3 text-sm';
+</script>
