@@ -59,8 +59,9 @@ async def upload_csv(request: Request, file: UploadFile = File(...)):
                 "partials/error.html",
                 {
                     "request": request,
-                    "error": "CSV must have 'text' and 'label' columns. "
-                    f"Found columns: {', '.join(df.columns)}",
+                    "error": "CSVには 'text' と 'label' の列が必要です。"
+                    f"検出された列：{', '.join(df.columns)}",
+                    "hint": "CSVファイルを修正して、もう一度アップロードしてください。",
                 },
                 status_code=400,
             )
@@ -86,7 +87,11 @@ async def upload_csv(request: Request, file: UploadFile = File(...)):
     except Exception as e:
         return templates.TemplateResponse(
             "partials/error.html",
-            {"request": request, "error": f"Failed to parse CSV: {str(e)}"},
+            {
+                "request": request,
+                "error": f"CSVの読み込みに失敗しました：{str(e)}",
+                "hint": "ファイル形式を確認して、もう一度お試しください。",
+            },
             status_code=400,
         )
 
@@ -106,7 +111,8 @@ async def train_model(
             "partials/error.html",
             {
                 "request": request,
-                "error": "No training data uploaded. Please upload a CSV first.",
+                "error": "学習データがアップロードされていません。まずCSVをアップロードしてください。",
+                "hint": "ステップ1からCSVをアップロードしてください。",
             },
             status_code=400,
         )
@@ -117,7 +123,11 @@ async def train_model(
         if len(names) < 2:
             return templates.TemplateResponse(
                 "partials/error.html",
-                {"request": request, "error": "Please provide at least 2 class names."},
+                {
+                    "request": request,
+                    "error": "クラス名を2つ以上入力してください。",
+                    "hint": "カンマ区切りで2つ以上のクラス名を入力してください。",
+                },
                 status_code=400,
             )
 
@@ -148,7 +158,11 @@ async def train_model(
     except Exception as e:
         return templates.TemplateResponse(
             "partials/error.html",
-            {"request": request, "error": f"Training failed: {str(e)}"},
+            {
+                "request": request,
+                "error": f"学習に失敗しました：{str(e)}",
+                "hint": "設定を確認して、もう一度「モデルを学習」を押してください。",
+            },
             status_code=500,
         )
 
@@ -169,7 +183,8 @@ async def predict_text(
             "partials/error.html",
             {
                 "request": request,
-                "error": "No trained model. Please upload data and train first.",
+                "error": "学習済みモデルがありません。データをアップロードして学習を行ってください。",
+                "hint": "ステップ1からやり直してください。",
             },
             status_code=400,
         )
@@ -200,6 +215,10 @@ async def predict_text(
     except Exception as e:
         return templates.TemplateResponse(
             "partials/error.html",
-            {"request": request, "error": f"Prediction failed: {str(e)}"},
+            {
+                "request": request,
+                "error": f"分類に失敗しました：{str(e)}",
+                "hint": "テキストを確認して、もう一度お試しください。",
+            },
             status_code=500,
         )

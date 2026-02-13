@@ -1,53 +1,47 @@
-<div class="bg-white rounded-lg shadow p-6">
-    <h2 class="text-xl font-semibold mb-4 flex items-center">
-        <span class="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center mr-3 text-sm">2</span>
-        Configure Classifier
-    </h2>
+<div class="mb-4 p-4 bg-green-50 rounded border border-green-200">
+    <p class="text-green-800">
+        <strong>CSVを読み込みました！</strong> {{ num_samples }}件のサンプル、ラベル：{{ unique_labels | join(', ') }}
+    </p>
+</div>
 
-    <div class="mb-4 p-4 bg-green-50 rounded border border-green-200">
-        <p class="text-green-800">
-            <strong>CSV loaded successfully!</strong><br>
-            Found {{ num_samples }} samples with labels: {{ unique_labels | join(', ') }}
+<form hx-post="/api/train"
+      hx-target="#step3-content"
+      hx-swap="innerHTML"
+      class="space-y-4">
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+            クラス名（カンマ区切り、ラベル順）
+        </label>
+        <input type="text" name="class_names" required
+               value="{{ suggested_classes | join(', ') }}"
+               placeholder="例：フェイク, 本物"
+               class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500">
+        <p class="text-sm text-gray-500 mt-1">
+            例：ラベル0 = フェイク、ラベル1 = 本物 の場合、「フェイク, 本物」と入力
         </p>
     </div>
 
-    <form hx-post="/api/train"
-          hx-target="#training-section"
-          hx-swap="innerHTML"
-          class="space-y-4">
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-                Class Names (comma-separated, in order of label indices)
-            </label>
-            <input type="text" name="class_names" required
-                   value="{{ suggested_classes | join(', ') }}"
-                   placeholder="e.g., Fake, Real"
-                   class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500">
-            <p class="text-sm text-gray-500 mt-1">
-                Example: If label 0 = Fake news, label 1 = Real news, enter "Fake, Real"
-            </p>
-        </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+            分類器の種類
+        </label>
+        <select name="classifier_type"
+                class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500">
+            <option value="logistic_regression" selected>ロジスティック回帰（高速）</option>
+            <option value="random_forest">ランダムフォレスト（低速・非線形）</option>
+        </select>
+    </div>
 
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-                Classifier Type
-            </label>
-            <select name="classifier_type"
-                    class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500">
-                <option value="logistic_regression" selected>Logistic Regression (fast, good for most cases)</option>
-                <option value="random_forest">Random Forest (slower, handles non-linear patterns)</option>
-            </select>
-        </div>
+    <button type="submit"
+            class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition inline-flex items-center">
+        モデルを学習
+        <svg class="htmx-indicator ml-2 animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+    </button>
+</form>
 
-        <button type="submit"
-                class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition flex items-center">
-            Train Model
-            <span class="htmx-indicator ml-2">
-                <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-            </span>
-        </button>
-    </form>
-</div>
+<script>
+    document.getElementById('step2-badge').className = 'bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center mr-3 text-sm';
+</script>
