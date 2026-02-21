@@ -450,6 +450,13 @@ class JapaneseTextClassifier:
         # Get word weights for the predicted class
         word_weights = exp.as_list(label=predicted_label)
 
+        # Filter stopwords and punctuation from word_weights
+        if self.stopwords:
+            word_weights = [
+                (word, weight) for word, weight in word_weights
+                if word not in self.stopwords and not PUNCT_PATTERN.match(word)
+            ]
+
         # Generate summaries (filter stopwords from output)
         sentences_jp = summarize_lime_explanation_jp(
             exp, class_idx=predicted_label, stopwords=self.stopwords

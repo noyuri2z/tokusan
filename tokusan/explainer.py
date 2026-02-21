@@ -1140,45 +1140,41 @@ def summarize_lime_explanation_jp(
     next3_1 = _select_features(mapped_1, n=3, exclude_words=exclude_for_next)
     top3_2 = _select_features(mapped_2, n=3)
 
-    # Pad lists if needed
-    def _pad_list(items, n: int = 3):
-        padded = list(items)
-        while len(padded) < n:
-            padded.append(("-", 0.0))
-        return padded
+    # Helper to format word list dynamically
+    def _format_word_list(items):
+        """Format (word, weight) pairs as 'word1 (weight1)、word2 (weight2)'."""
+        if not items:
+            return ""
+        parts = [f"{word} ({_format_weight_jp(weight)})" for word, weight in items]
+        return "、".join(parts)
 
-    top3_1 = _pad_list(top3_1, 3)
-    next3_1 = _pad_list(next3_1, 3)
-    top3_2 = _pad_list(top3_2, 3)
+    # Build sentence 1: classification result + top contributing words
+    if top3_1:
+        words_part = "、".join(word for word, _ in top3_1)
+        weights_part = "、".join(_format_weight_jp(weight) for _, weight in top3_1)
+        sent1 = (
+            f"このインスタンスは{p0:.3f}対{p1:.3f}で{class_1}と分類されました。"
+            f"{class_1}への分類に最も強い影響を与えた言葉は{words_part}で、"
+            f"それぞれの{weights_part}となっています。"
+        )
+    else:
+        sent1 = f"このインスタンスは{p0:.3f}対{p1:.3f}で{class_1}と分類されました。"
 
-    # Format weights
-    t1w0 = _format_weight_jp(top3_1[0][1])
-    t1w1 = _format_weight_jp(top3_1[1][1])
-    t1w2 = _format_weight_jp(top3_1[2][1])
+    sentences = [sent1]
 
-    n1w0 = _format_weight_jp(next3_1[0][1])
-    n1w1 = _format_weight_jp(next3_1[1][1])
-    n1w2 = _format_weight_jp(next3_1[2][1])
+    # Build sentence 2: only if we have additional features
+    sent2_parts = []
+    if next3_1:
+        next_list = _format_word_list(next3_1)
+        sent2_parts.append(f"他に{class_1}への分類の確率を上げた言葉として{next_list}などが挙げられます。")
+    if top3_2:
+        top2_list = _format_word_list(top3_2)
+        sent2_parts.append(f"{class_2}への分類への確率を上げた言葉として、{top2_list}などが挙げられます。")
 
-    t2w0 = _format_weight_jp(top3_2[0][1])
-    t2w1 = _format_weight_jp(top3_2[1][1])
-    t2w2 = _format_weight_jp(top3_2[2][1])
+    if sent2_parts:
+        sentences.append("".join(sent2_parts))
 
-    # Build sentences
-    sent1 = (
-        f"このインスタンスは{p0:.3f}対{p1:.3f}で{class_1}と分類されました。"
-        f"{class_1}への分類に最も強い影響を与えた言葉は{top3_1[0][0]}, {top3_1[1][0]}, {top3_1[2][0]}で、"
-        f"それぞれの{t1w0}, {t1w1}, {t1w2}となっています。"
-    )
-
-    sent2 = (
-        f"他に{class_1}への分類の確率を上げた言葉として{next3_1[0][0]} ({n1w0})、"
-        f"{next3_1[1][0]} ({n1w1})、{next3_1[2][0]} ({n1w2})などが挙げられます。"
-        f"{class_2}への分類への確率を上げた言葉として、{top3_2[0][0]} ({t2w0})、"
-        f"{top3_2[1][0]} ({t2w1})、{top3_2[2][0]} ({t2w2})などが挙げられます。"
-    )
-
-    return [sent1, sent2]
+    return sentences
 
 
 def print_lime_narrative_jp(

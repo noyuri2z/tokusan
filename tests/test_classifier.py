@@ -549,7 +549,7 @@ class TestJapaneseTextClassifierPrediction:
 
         assert result.explanation is not None
         assert len(result.explanation.word_weights) > 0
-        assert len(result.explanation.sentences_jp) == 2
+        assert len(result.explanation.sentences_jp) >= 1
 
     def test_predict_probabilities(self, trained_classifier):
         """Test that probabilities are returned correctly."""
