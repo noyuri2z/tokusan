@@ -415,6 +415,9 @@ class TestJapaneseTextClassifierInit:
             stopwords=custom,
         )
 
+        # User stopwords are merged with the default Japanese stopwords
+        assert stopwords.issubset(clf.stopwords)
+        assert JAPANESE_STOPWORDS.issubset(clf.stopwords)
         # Custom stopwords should be merged with JAPANESE_STOPWORDS
         assert 'カスタム語' in clf.stopwords
         assert clf.stopwords >= set(JAPANESE_STOPWORDS)

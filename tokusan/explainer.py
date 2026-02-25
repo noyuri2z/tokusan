@@ -254,6 +254,11 @@ class IndexedString:
                 non_vocab.add(word)
                 continue
 
+            # Skip single-character tokens (uninformative in Japanese)
+            if len(word) < 2:
+                non_vocab.add(word)
+                continue
+
             if bow:
                 # Bag of words: group all occurrences
                 if word not in vocab:
@@ -910,7 +915,6 @@ def summarize_lime_explanation(
     # Map IDs to words
     mapped = explanation_obj.domain_mapper.map_exp_ids(local, positions=False)
 
-    # Filter out stopwords from the explanation
     if stopwords:
         mapped = [(w, wt) for w, wt in mapped if w not in stopwords]
 
@@ -1097,6 +1101,10 @@ def summarize_lime_explanation_jp(
 
     mapped_1 = _map(feats_1)
     mapped_2 = _map(feats_2)
+
+    if stopwords:
+        mapped_1 = [(w, wt) for w, wt in mapped_1 if w not in stopwords]
+        mapped_2 = [(w, wt) for w, wt in mapped_2 if w not in stopwords]
 
     # Select top features with preference for positive weights
     def _select_features(mapped_feats, n: int = 3, exclude_words=None):
