@@ -1,5 +1,6 @@
 """FastAPI web application for Tokusan text classifier."""
 
+import re
 from io import StringIO
 from pathlib import Path
 
@@ -119,7 +120,7 @@ async def train_model(
 
     try:
         # Parse class names
-        names = [n.strip() for n in class_names.split(",") if n.strip()]
+        names = [n.strip() for n in re.split(r"[,、]", class_names) if n.strip()]
         if len(names) < 2:
             return templates.TemplateResponse(
                 "partials/error.html",

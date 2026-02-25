@@ -40,7 +40,7 @@ from .explainer import (
     summarize_lime_explanation,
     summarize_lime_explanation_jp,
 )
-from .japanese import splitter as japanese_splitter
+from .japanese import splitter as japanese_splitter, JAPANESE_STOPWORDS
 from .results import ExplanationResult, PredictionResult, TrainingResult
 
 
@@ -148,7 +148,11 @@ class JapaneseTextClassifier:
         self.class_names = class_names
         self.classifier_type = classifier_type
         self.max_features = max_features
-        self.stopwords = stopwords
+        # Merge user-provided stopwords with SlothLib Japanese stopwords
+        if stopwords is not None:
+            self.stopwords = set(stopwords) | set(JAPANESE_STOPWORDS)
+        else:
+            self.stopwords = set(JAPANESE_STOPWORDS)
         self.random_state = random_state
         self.classifier_kwargs = classifier_kwargs
 
@@ -446,9 +450,20 @@ class JapaneseTextClassifier:
         # Get word weights for the predicted class
         word_weights = exp.as_list(label=predicted_label)
 
+        # Filter stopwords and punctuation from word_weights
+        if self.stopwords:
+            word_weights = [
+                (word, weight) for word, weight in word_weights
+                if word not in self.stopwords and not PUNCT_PATTERN.match(word)
+            ]
+
         # Generate summaries
-        sentences_jp = summarize_lime_explanation_jp(exp, class_idx=predicted_label)
-        sentences_en = summarize_lime_explanation(exp, class_idx=predicted_label)
+        sentences_jp = summarize_lime_explanation_jp(
+            exp, class_idx=predicted_label, stopwords=self.stopwords
+        )
+        sentences_en = summarize_lime_explanation(
+            exp, class_idx=predicted_label, stopwords=self.stopwords
+        )
 
         # Build probabilities dict
         probabilities = {

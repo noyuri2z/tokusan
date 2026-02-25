@@ -404,8 +404,10 @@ class TestJapaneseTextClassifierInit:
 
         assert clf.classifier_type == 'random_forest'
 
-    def test_init_with_stopwords(sel        """Test initialization with custom stopwords."""
+    def test_init_with_stopwords(self):
+        """Test initialization with custom stopwords."""
         from tokusan import JapaneseTextClassifier
+        from tokusan.japanese import JAPANESE_STOPWORDS
 
         stopwords = {'の', 'は', 'が'}
         clf = JapaneseTextClassifier(
@@ -413,7 +415,9 @@ class TestJapaneseTextClassifierInit:
             stopwords=stopwords,
         )
 
-        assert clf.stopwords == stopwords
+        # User stopwords are merged with the default Japanese stopwords
+        assert stopwords.issubset(clf.stopwords)
+        assert JAPANESE_STOPWORDS.issubset(clf.stopwords)
 
     def test_repr(self):
         """Test string representation."""

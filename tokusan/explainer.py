@@ -180,7 +180,8 @@ class IndexedString:
         raw_string: str,
         split_expression: Union[str, Callable] = r'\W+',
         bow: bool = True,
-        mask_string: Optional[str] = None
+        mask_string: Optional[str] = None,
+        stopwords: Optional[set] = None
     ):
         """
         Initialize an IndexedString.
@@ -194,6 +195,9 @@ class IndexedString:
                 the same feature ID. If False, each position is separate.
             mask_string: String to use when masking words in non-bow mode.
                         Defaults to 'UNKWORDZ'.
+            stopwords: Optional set of words to exclude from vocabulary.
+                      Stopwords are treated like non-vocabulary tokens and
+                      will not become LIME features.
 
         Example:
             >>> indexed = IndexedString("The quick brown fox")
@@ -242,6 +246,16 @@ class IndexedString:
 
             # Skip separator tokens
             if non_word(word):
+                non_vocab.add(word)
+                continue
+
+            # Skip stopwords
+            if stopwords and word in stopwords:
+                non_vocab.add(word)
+                continue
+
+            # Skip single-character tokens (uninformative in Japanese)
+            if len(word) < 2:
                 non_vocab.add(word)
                 continue
 
@@ -519,7 +533,8 @@ class TextExplainer:
         mask_string: Optional[str] = None,
         random_state=None,
         char_level: bool = False,
-        lang: str = "en"
+        lang: str = "en",
+        stopwords: Optional[set] = None
     ):
         """
         Initialize the text explainer.
@@ -543,6 +558,9 @@ class TextExplainer:
             random_state: Random state for reproducibility.
             char_level: If True, treat each character as a feature.
             lang: Language code. 'jp' enables Japanese tokenization.
+            stopwords: Optional set of stopwords to exclude from LIME features.
+                      When lang='jp' and no custom stopwords are provided,
+                      automatically loads the SlothLib Japanese stopword list.
         """
         # Set up the kernel function for weighting samples
         if kernel is None:
@@ -566,6 +584,15 @@ class TextExplainer:
         if self.lang == "jp" and not char_level:
             from .japanese import splitter, active_japanese_tokenizer
             self.split_expression = splitter
+
+        # Set up stopwords: auto-load for Japanese if none provided
+        if stopwords is not None:
+            self.stopwords = stopwords
+        elif self.lang == "jp":
+            from .japanese import JAPANESE_STOPWORDS
+            self.stopwords = JAPANESE_STOPWORDS
+        else:
+            self.stopwords = None
 
     def explain_instance(
         self,
@@ -626,7 +653,8 @@ class TextExplainer:
                 text_instance,
                 bow=self.bow,
                 split_expression=self.split_expression,
-                mask_string=self.mask_string
+                mask_string=self.mask_string,
+                stopwords=self.stopwords
             )
 
         domain_mapper = TextDomainMapper(indexed_string)
@@ -855,7 +883,8 @@ def generate_sentence_for_feature(
 
 def summarize_lime_explanation(
     explanation_obj: explanation.Explanation,
-    class_idx: int = 1
+    class_idx: int = 1,
+    stopwords: Optional[set] = None
 ) -> List[str]:
     """
     Generate a list of English sentences summarizing the explanation.
@@ -885,6 +914,10 @@ def summarize_lime_explanation(
 
     # Map IDs to words
     mapped = explanation_obj.domain_mapper.map_exp_ids(local, positions=False)
+
+    if stopwords:
+        mapped = [(w, wt) for w, wt in mapped if w not in stopwords]
+
     exp_list = mapped
 
     sentences = []
@@ -997,7 +1030,8 @@ def generate_sentence_for_feature_jp(
 
 def summarize_lime_explanation_jp(
     explanation_obj: explanation.Explanation,
-    class_idx: int = 1
+    class_idx: int = 1,
+    stopwords: Optional[set] = None
 ) -> List[str]:
     """
     Generate a Japanese summary of the LIME explanation.
@@ -1067,6 +1101,10 @@ def summarize_lime_explanation_jp(
 
     mapped_1 = _map(feats_1)
     mapped_2 = _map(feats_2)
+
+    if stopwords:
+        mapped_1 = [(w, wt) for w, wt in mapped_1 if w not in stopwords]
+        mapped_2 = [(w, wt) for w, wt in mapped_2 if w not in stopwords]
 
     # Select top features with preference for positive weights
     def _select_features(mapped_feats, n: int = 3, exclude_words=None):
