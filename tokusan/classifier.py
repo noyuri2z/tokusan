@@ -457,7 +457,7 @@ class JapaneseTextClassifier:
                 if word not in self.stopwords and not PUNCT_PATTERN.match(word)
             ]
 
-        # Generate summaries
+        # Generate summaries (filter stopwords from output)
         sentences_jp = summarize_lime_explanation_jp(
             exp, class_idx=predicted_label, stopwords=self.stopwords
         )

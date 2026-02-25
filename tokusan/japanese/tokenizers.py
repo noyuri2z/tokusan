@@ -36,7 +36,7 @@ if _sudachi_available:
     # This is initialized once on module import for performance
     _SUDACHI_TOKENIZER = _sudachi_dictionary.Dictionary().create()
 
-    # Use SplitMode.C (most granular splitting) for detailed analysis
+    # Use SplitMode.C (long unit) for detailed analysis
     # SplitMode options:
     #   - A: Short unit (similar to unidic-cwj short unit)
     #   - B: Middle unit (default, balanced)
