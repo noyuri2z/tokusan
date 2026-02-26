@@ -1,5 +1,17 @@
 # Worklog
 
+## 2026-02-26: Fix tokenizer mismatch between LIME and TF-IDF
+
+**File changed:** `tokusan/classifier.py`
+
+**Problem:** `TextExplainer` was instantiated with `lang='jp'`, which silently overwrites the passed `split_expression` argument with the raw `splitter` function (no punctuation filtering). This caused a mismatch: TF-IDF uses `_default_tokenizer` (filters stopwords + punctuation) while LIME used the raw tokenizer (filters stopwords but NOT punctuation). As a result, punctuation characters like `「」。、` appeared as LIME vocabulary features that TF-IDF had never seen, producing misleading or incorrect word importance scores.
+
+**Changes:**
+- Line 263: Removed `lang='jp'`; added `stopwords=self.stopwords` to pass stopword list directly. `split_expression=self._tokenizer` is now respected without being overridden.
+
+**Verification:**
+- `pytest tests/test_tokusan.py -v` → 68 passed, 1 pre-existing failure (unrelated)
+
 ## 2026-02-26: User Feedback Feature Improvements
 
 **Files changed:**
