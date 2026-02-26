@@ -25,6 +25,8 @@
    - Corrected the worklog diagnosis from the prior session: "金" is filtered because it is in `JAPANESE_STOPWORDS` (as a day-of-week abbreviation), not due to a `len(word) < 2` filter. The length filter removal is still correct for other single-char kanji like "愛" that are not stopwords.
    - Added `TestTokenizationFixes` class to `tests/test_tokusan.py` with 3 regression tests.
 
+5. **AI fallback banner text correction:** Updated the Japanese message in `prediction_result.html` to: "AIによる説明がご利用いただけません（reason）。テンプレートによる説明を表示します。"
+
 **Verification:**
 - `pytest tests/test_tokusan.py::TestTokenizationFixes -v` → 3 passed
 
@@ -34,18 +36,20 @@
 
 **Problem:** When users submitted text containing only stopwords or punctuation (e.g., `"は が で"`), the UI showed the cryptic error `分類に失敗しました：low >= high`. This originated from `numpy.random.randint(1, 1)` in `_data_labels_distances` when LIME's `doc_size` was 0 (no valid tokens remained after filtering).
 
-Additionally, the `IndexedString.__init__` was incorrectly discarding all single-character tokens regardless of whether they were stopwords or punctuation. Meaningful single-character kanji (e.g., `"金"`, `"愛"`) were being silently dropped.
+Additionally, `IndexedString.__init__` had a `len(word) < 2` filter that discarded all single-character tokens. This was too broad — single-character kanji that are not stopwords (e.g., `"愛"`) should be kept.
 
 **Changes:**
 
-- `tokusan/explainer.py` — `IndexedString.__init__`: Removed the `len(word) < 2` filter; single non-stopword, non-punctuation characters are now kept as valid tokens.
+- `tokusan/explainer.py` — `IndexedString.__init__`: Removed the `len(word) < 2` filter; single-character tokens are now kept if they are not stopwords or punctuation.
 - `tokusan/explainer.py` — `_data_labels_distances`: Added a `doc_size == 0` guard that raises `ExplanationError` with a Japanese-language message before the numpy call fails.
 - `tokusan/explainer.py` — Added `from .exceptions import ExplanationError` import.
 - `tokusan/exceptions.py` — Updated `ExplanationError` docstring to document the empty-token failure condition.
 
-**Verification:**
-- Submit only stopwords/particles (e.g., `"は が で を"`) → descriptive error shown in UI
-- Submit a single meaningful kanji (e.g., `"金"`) → classifies successfully (no longer filtered)
+**Note (corrected in the next session):** The original verification claimed `"金"` classifies successfully after the fix. This was wrong — `"金"` is in `JAPANESE_STOPWORDS` (as a day-of-week abbreviation) and remains filtered. The correct test case for a meaningful single-character kanji is `"愛"`. The `doc_size == 0` guard also required a separate whitespace-filtering fix in `splitters.py` to work correctly (see "User Feedback Feature Improvements" entry above).
+
+**Verification (corrected):**
+- Submit only stopwords/particles without spaces (e.g., `"はがでを"`) → descriptive error shown in UI
+- Submit a single meaningful kanji not in stopwords (e.g., `"愛"`) → classifies successfully
 - Submit a normal sentence → classifies successfully as before
 
 ## 2026-02-23: Revert SudachiPy SplitMode from A back to C
