@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from tokusan import JapaneseTextClassifier
+from tokusan.ai_interpreter import is_ai_available, _check_gemini_available
 
 from .state import app_state
 
@@ -19,9 +20,10 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# Configure templates
+# Configure templates and sample data path
 BASE_DIR = Path(__file__).parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+SAMPLES_DIR = BASE_DIR / "samples"
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -95,6 +97,41 @@ async def upload_csv(request: Request, file: UploadFile = File(...)):
             },
             status_code=400,
         )
+
+
+@app.post("/api/load-sample", response_class=HTMLResponse)
+async def load_sample(request: Request):
+    """Load the bundled sample dataset into the session."""
+    session_id = request.cookies.get("session_id")
+    session = app_state.get_or_create_session(session_id)
+
+    sample_path = SAMPLES_DIR / "fakenews_sample.csv"
+    if not sample_path.exists():
+        return templates.TemplateResponse(
+            "partials/error.html",
+            {
+                "request": request,
+                "error": "サンプルデータファイルが見つかりませんでした。",
+                "hint": "管理者に連絡してください。",
+            },
+            status_code=500,
+        )
+
+    df = pd.read_csv(sample_path)
+    session.training_data = df
+
+    unique_labels = sorted(df["label"].unique())
+    response = templates.TemplateResponse(
+        "partials/config_form.html",
+        {
+            "request": request,
+            "num_samples": len(df),
+            "unique_labels": unique_labels,
+            "suggested_classes": [f"Class_{l}" for l in unique_labels],
+        },
+    )
+    response.set_cookie("session_id", session.session_id, httponly=True)
+    return response
 
 
 @app.post("/api/train", response_class=HTMLResponse)
@@ -172,10 +209,8 @@ async def train_model(
 async def predict_text(
     request: Request,
     text: str = Form(...),
-    explain: bool = Form(True),
-    use_ai: bool = Form(False),
 ):
-    """Classify text and return prediction with explanation."""
+    """Classify text and return prediction with LIME explanation and AI interpretation."""
     session_id = request.cookies.get("session_id")
     session = app_state.get_or_create_session(session_id)
 
@@ -190,11 +225,21 @@ async def predict_text(
             status_code=400,
         )
 
+    # Determine AI availability and reason for unavailability
+    ai_available = is_ai_available()
+    if not ai_available:
+        if not _check_gemini_available():
+            ai_fallback_reason = "google-genai パッケージがインストールされていません"
+        else:
+            ai_fallback_reason = "GEMINI_API_KEY が設定されていません"
+    else:
+        ai_fallback_reason = None
+
     try:
         result = session.classifier.predict(
             text=text,
-            explain=explain,
-            use_ai=use_ai if use_ai else None,
+            explain=True,
+            use_ai=True,
             fallback_to_template=True,
         )
 
@@ -210,6 +255,8 @@ async def predict_text(
                 "result": result,
                 "text": text,
                 "max_weight": max_weight,
+                "ai_available": ai_available,
+                "ai_fallback_reason": ai_fallback_reason,
             },
         )
 

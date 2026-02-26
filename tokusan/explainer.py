@@ -35,6 +35,7 @@ from sklearn.utils import check_random_state
 
 from . import explanation
 from .base import LimeBase
+from .exceptions import ExplanationError
 
 
 class TextDomainMapper(explanation.DomainMapper):
@@ -251,11 +252,6 @@ class IndexedString:
 
             # Skip stopwords
             if stopwords and word in stopwords:
-                non_vocab.add(word)
-                continue
-
-            # Skip single-character tokens (uninformative in Japanese)
-            if len(word) < 2:
                 non_vocab.add(word)
                 continue
 
@@ -806,6 +802,13 @@ class TextExplainer:
             ).ravel() * 100
 
         doc_size = indexed_string.num_words()
+
+        if doc_size == 0:
+            raise ExplanationError(
+                "テキストに分析可能な単語が見つかりませんでした。"
+                "ストップワードや記号のみで構成されるテキストは分析できません。"
+                "意味のある単語を含む、より長いテキストを入力してください。"
+            )
 
         # Generate random number of words to remove for each sample
         sample = self.random_state.randint(1, doc_size + 1, num_samples - 1)

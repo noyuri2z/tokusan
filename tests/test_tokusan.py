@@ -1156,6 +1156,46 @@ class TestIntegration:
 
 
 # =============================================================================
+# Tokenization Fix Regression Tests (2026-02-26)
+# =============================================================================
+
+class TestTokenizationFixes:
+    """Regression tests for the 2026-02-26 tokenization fixes."""
+
+    def test_stopwords_only_raises_explanation_error(self):
+        """Stopwords-only text must raise ExplanationError instead of crashing with 'low >= high'."""
+        import numpy as np
+        from tokusan import TextExplainer
+        from tokusan.exceptions import ExplanationError
+
+        explainer = TextExplainer(class_names=['A', 'B'], lang='jp')
+
+        def dummy_classifier(texts):
+            return np.array([[0.5, 0.5]] * len(texts))
+
+        # "はがでを" contains only particles, all of which are stopwords
+        with pytest.raises(ExplanationError):
+            explainer.explain_instance("はがでを", dummy_classifier, num_samples=10)
+
+    def test_single_char_kanji_not_filtered(self):
+        """Single-character kanji that are not stopwords must be kept as vocabulary tokens."""
+        from tokusan.explainer import IndexedString
+        from tokusan.japanese import splitter, JAPANESE_STOPWORDS
+
+        # "愛" is not in JAPANESE_STOPWORDS and is a meaningful single-char kanji
+        indexed = IndexedString("愛", split_expression=splitter, stopwords=JAPANESE_STOPWORDS)
+        assert indexed.num_words() == 1
+
+    def test_normal_sentence_works(self):
+        """Normal Japanese sentences must produce at least one vocabulary token."""
+        from tokusan.explainer import IndexedString
+        from tokusan.japanese import splitter, JAPANESE_STOPWORDS
+
+        indexed = IndexedString("選挙管理委員会は重要です", split_expression=splitter, stopwords=JAPANESE_STOPWORDS)
+        assert indexed.num_words() >= 1
+
+
+# =============================================================================
 # Run Tests
 # =============================================================================
 
