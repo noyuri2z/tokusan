@@ -90,7 +90,7 @@ def split(text: str) -> List[str]:
     # Use SudachiPy for proper morphological analysis
     # The tokenize() method returns morpheme objects with surface() for the string form
     morphemes = _SUDACHI_TOKENIZER.tokenize(text, _SUDACHI_MODE)
-    return [morpheme.surface() for morpheme in morphemes]
+    return [morpheme.surface() for morpheme in morphemes if not morpheme.surface().isspace()]
 
 
 __all__ = ["split", "active_japanese_tokenizer"]

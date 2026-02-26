@@ -42,6 +42,8 @@ class ExplanationError(TokusanError):
     - Invalid label index is requested
     - Explanation mode is incorrectly specified
     - Required explanation data is missing
+    - Input text contains no analyzable tokens after filtering
+      (all tokens are stopwords or punctuation/symbols)
     """
     pass
 
