@@ -259,11 +259,11 @@ class JapaneseTextClassifier:
             output_dict=True,
         )
 
-        # Create explainer
+        # Create explainer using the same tokenizer as TF-IDF to avoid mismatch
         self._explainer = TextExplainer(
             class_names=self.class_names,
             split_expression=self._tokenizer,
-            lang='jp',
+            stopwords=self.stopwords,
             random_state=self.random_state,
         )
 
