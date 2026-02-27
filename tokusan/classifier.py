@@ -23,6 +23,7 @@ Example:
 """
 
 import re
+import unicodedata
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union
 
@@ -72,6 +73,10 @@ def _default_tokenizer(
     for token in tokens:
         # Filter punctuation
         if filter_punct and PUNCT_PATTERN.match(token):
+            continue
+
+        # Filter single-character hiragana / katakana (never meaningful as features)
+        if len(token) == 1 and unicodedata.name(token, '').startswith(('HIRAGANA', 'KATAKANA')):
             continue
 
         # Filter stopwords
@@ -573,11 +578,11 @@ class JapaneseTextClassifier:
 
         instance.is_trained = True
 
-        # Recreate explainer
+        # Recreate explainer using the same tokenizer as TF-IDF to avoid mismatch
         instance._explainer = TextExplainer(
             class_names=instance.class_names,
             split_expression=instance._tokenizer,
-            lang='jp',
+            stopwords=instance.stopwords,
             random_state=instance.random_state,
         )
 

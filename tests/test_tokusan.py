@@ -1194,6 +1194,37 @@ class TestTokenizationFixes:
         indexed = IndexedString("選挙管理委員会は重要です", split_expression=splitter, stopwords=JAPANESE_STOPWORDS)
         assert indexed.num_words() >= 1
 
+    def test_single_hiragana_filtered(self):
+        """Single hiragana characters like 'る' must be filtered from features."""
+        from tokusan.classifier import _default_tokenizer
+        from tokusan.japanese import JAPANESE_STOPWORDS
+
+        tokens = _default_tokenizer("走る", stopwords=JAPANESE_STOPWORDS)
+        assert 'る' not in tokens
+
+    def test_single_katakana_filtered(self):
+        """Single katakana characters must be filtered even if Sudachi produces them."""
+        import unicodedata
+        from tokusan.classifier import _default_tokenizer
+        from tokusan.japanese import JAPANESE_STOPWORDS
+
+        tokens = _default_tokenizer("インドネシア", stopwords=JAPANESE_STOPWORDS)
+        for t in tokens:
+            if len(t) == 1:
+                assert not unicodedata.name(t, '').startswith(('HIRAGANA', 'KATAKANA')), \
+                    f"Single kana '{t}' should have been filtered"
+
+    def test_single_kanji_kept(self):
+        """Single-char kanji like '島' must be kept (meaningful morphemes)."""
+        from tokusan.classifier import _default_tokenizer
+        from tokusan.japanese import JAPANESE_STOPWORDS
+        from tokusan.japanese.splitters import split
+
+        # Only assert if Sudachi actually produces '島' as a token
+        if '島' in split("ジャワ島"):
+            tokens = _default_tokenizer("ジャワ島", stopwords=JAPANESE_STOPWORDS)
+            assert '島' in tokens
+
 
 # =============================================================================
 # Run Tests

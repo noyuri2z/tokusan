@@ -26,20 +26,36 @@
         <!-- Panel: Sample data -->
         <div id="panel-sample">
             <p class="text-sm text-gray-600 mb-4">
-                フェイクニュース分類のデモデータを使用します（501件、3クラス）。
+                デモ用のサンプルデータを選んで読み込んでください。
             </p>
-            <form hx-post="/api/load-sample"
-                  hx-target="#step2-content"
-                  hx-swap="innerHTML">
-                <button type="submit"
-                        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition inline-flex items-center">
-                    サンプルデータを読み込む
-                    <svg class="htmx-indicator ml-2 animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                </button>
-            </form>
+            <div class="flex flex-wrap gap-3">
+                <form hx-post="/api/load-sample"
+                      hx-target="#step2-content"
+                      hx-swap="innerHTML">
+                    <input type="hidden" name="sample" value="fakenews">
+                    <button type="submit"
+                            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition inline-flex items-center">
+                        フェイクニュース分類（501件）
+                        <svg class="htmx-indicator ml-2 animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </button>
+                </form>
+                <form hx-post="/api/load-sample"
+                      hx-target="#step2-content"
+                      hx-swap="innerHTML">
+                    <input type="hidden" name="sample" value="ramen">
+                    <button type="submit"
+                            class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition inline-flex items-center">
+                        ラーメンレビュー評価（600件）
+                        <svg class="htmx-indicator ml-2 animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </button>
+                </form>
+            </div>
         </div>
 
         <!-- Panel: CSV upload with drag-and-drop -->

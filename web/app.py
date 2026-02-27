@@ -100,12 +100,24 @@ async def upload_csv(request: Request, file: UploadFile = File(...)):
 
 
 @app.post("/api/load-sample", response_class=HTMLResponse)
-async def load_sample(request: Request):
-    """Load the bundled sample dataset into the session."""
+async def load_sample(request: Request, sample: str = Form("fakenews")):
+    """Load a bundled sample dataset into the session."""
     session_id = request.cookies.get("session_id")
     session = app_state.get_or_create_session(session_id)
 
-    sample_path = SAMPLES_DIR / "fakenews_sample.csv"
+    sample_files = {
+        "fakenews": "fakenews_sample.csv",
+        "ramen": "ramen_review_sample.csv",
+    }
+    filename = sample_files.get(sample)
+    if filename is None:
+        return templates.TemplateResponse(
+            "partials/error.html",
+            {"request": request, "error": f"不明なサンプル名: {sample}", "hint": ""},
+            status_code=400,
+        )
+
+    sample_path = SAMPLES_DIR / filename
     if not sample_path.exists():
         return templates.TemplateResponse(
             "partials/error.html",
