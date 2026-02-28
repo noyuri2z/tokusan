@@ -1,20 +1,4 @@
-"""
-Japanese stopword list based on SlothLib.
-
-This module provides a comprehensive set of Japanese stopwords sourced from
-SlothLib (http://svn.sourceforge.jp/svnroot/slothlib/CSharp/Version1/SlothLib/NLP/Filter/StopWord/word/Japanese.txt).
-The list covers particles, auxiliary verbs, pronouns, conjunctions, and other
-common but uninformative words (~310 words).
-
-The stopwords are embedded directly as a constant to avoid network dependency.
-
-Usage:
-    >>> from tokusan.japanese.stopwords import JAPANESE_STOPWORDS
-    >>> "の" in JAPANESE_STOPWORDS
-    True
-    >>> "地震" in JAPANESE_STOPWORDS
-    False
-"""
+"""Japanese stopword list based on SlothLib (~310 words)."""
 
 JAPANESE_STOPWORDS = frozenset([
     # Hiragana stopwords

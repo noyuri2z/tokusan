@@ -1,22 +1,9 @@
-"""
-Comprehensive test suite for the tokusan package.
-
-This module tests all key functionality including:
-- Japanese tokenization
-- Text explanation generation
-- Plain language summaries (English and Japanese)
-- Explanation visualization
-
-Run tests with: pytest tests/test_tokusan.py -v
-"""
+"""Tests for the tokusan package."""
 
 import numpy as np
 import pytest
 from unittest.mock import MagicMock
 
-# =============================================================================
-# Test Imports
-# =============================================================================
 
 class TestImports:
     """Test that all modules can be imported correctly."""
@@ -73,10 +60,6 @@ class TestImports:
         assert callable(active_japanese_tokenizer)
 
 
-# =============================================================================
-# Test Japanese Tokenization
-# =============================================================================
-
 class TestJapaneseTokenization:
     """Test Japanese tokenization functionality."""
 
@@ -110,10 +93,6 @@ class TestJapaneseTokenization:
         for token in tokens:
             assert not token.isspace()
 
-
-# =============================================================================
-# Test IndexedString
-# =============================================================================
 
 class TestIndexedString:
     """Test IndexedString class for text indexing."""
@@ -180,10 +159,6 @@ class TestIndexedString:
         assert indexed.num_words() == 3
 
 
-# =============================================================================
-# Test IndexedCharacters
-# =============================================================================
-
 class TestIndexedCharacters:
     """Test IndexedCharacters class for character-level indexing."""
 
@@ -194,7 +169,7 @@ class TestIndexedCharacters:
         indexed = IndexedCharacters(text)
 
         assert indexed.raw_string() == text
-        assert indexed.num_words() == 5  # 5 unique characters
+        assert indexed.num_words() == 4  # 4 unique characters (h, e, l, o)
 
     def test_indexed_characters_bow(self):
         """Test bow mode groups same characters."""
@@ -213,10 +188,6 @@ class TestIndexedCharacters:
         result = indexed.inverse_removing([0])
         assert len(result) == len(text)  # Masked, not removed
 
-
-# =============================================================================
-# Test TextExplainer
-# =============================================================================
 
 class TestTextExplainer:
     """Test TextExplainer class."""
@@ -319,10 +290,6 @@ class TestTextExplainer:
         assert exp is not None
 
 
-# =============================================================================
-# Test Explanation Class
-# =============================================================================
-
 class TestExplanation:
     """Test Explanation class and its methods."""
 
@@ -392,10 +359,6 @@ class TestExplanation:
         assert 0 in labels or 1 in labels
 
 
-# =============================================================================
-# Test Plain Language Functions (English)
-# =============================================================================
-
 class TestEnglishExplanationFunctions:
     """Test English plain language explanation functions."""
 
@@ -453,10 +416,6 @@ class TestEnglishExplanationFunctions:
             assert isinstance(s, str)
 
 
-# =============================================================================
-# Test Plain Language Functions (Japanese)
-# =============================================================================
-
 class TestJapaneseExplanationFunctions:
     """Test Japanese plain language explanation functions."""
 
@@ -511,10 +470,6 @@ class TestJapaneseExplanationFunctions:
         assert isinstance(sentences, list)
         assert len(sentences) == 2  # Two-sentence format
 
-
-# =============================================================================
-# Test Japanese Explanation Output Format
-# =============================================================================
 
 class TestJapaneseExplanationOutputFormat:
     """Test that Japanese explanation output matches the expected format."""
@@ -943,10 +898,6 @@ class TestJapaneseExplanationEdgeCases:
         assert "中" in result_above_medium
 
 
-# =============================================================================
-# Test LimeBase
-# =============================================================================
-
 class TestLimeBase:
     """Test LimeBase class for core LIME algorithm."""
 
@@ -997,10 +948,6 @@ class TestLimeBase:
         assert len(features) <= 3
 
 
-# =============================================================================
-# Test Exceptions
-# =============================================================================
-
 class TestExceptions:
     """Test custom exception classes."""
 
@@ -1025,10 +972,6 @@ class TestExceptions:
         with pytest.raises(TokusanError):
             raise ExplanationError("Explanation failed")
 
-
-# =============================================================================
-# Test Domain Mapper
-# =============================================================================
 
 class TestDomainMapper:
     """Test DomainMapper class."""
@@ -1059,10 +1002,6 @@ class TestDomainMapper:
         # Result should contain words, not IDs
         assert all(isinstance(item[0], str) for item in result)
 
-
-# =============================================================================
-# Integration Tests
-# =============================================================================
 
 class TestIntegration:
     """Integration tests combining multiple components."""
@@ -1155,10 +1094,6 @@ class TestIntegration:
         assert len(summary) == 2  # Two sentences
 
 
-# =============================================================================
-# Tokenization Fix Regression Tests (2026-02-26)
-# =============================================================================
-
 class TestTokenizationFixes:
     """Regression tests for the 2026-02-26 tokenization fixes."""
 
@@ -1225,10 +1160,6 @@ class TestTokenizationFixes:
             tokens = _default_tokenizer("ジャワ島", stopwords=JAPANESE_STOPWORDS)
             assert '島' in tokens
 
-
-# =============================================================================
-# Run Tests
-# =============================================================================
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

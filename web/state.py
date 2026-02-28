@@ -25,13 +25,7 @@ class AppState:
     """Global application state with session management."""
 
     def __init__(self, max_sessions: int = 100, session_ttl: int = 3600):
-        """
-        Initialize application state.
-
-        Args:
-            max_sessions: Maximum number of concurrent sessions.
-            session_ttl: Session time-to-live in seconds (default 1 hour).
-        """
+        """Initialize application state with session limits."""
         self.sessions: Dict[str, SessionState] = {}
         self.max_sessions = max_sessions
         self.session_ttl = session_ttl

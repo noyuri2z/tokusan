@@ -25,13 +25,13 @@ class TestGeminiInterpreter:
                     GeminiInterpreter()
 
     def test_init_without_package(self):
-        """Test that initialization fails without google-generativeai package."""
+        """Test that initialization fails without google-genai package."""
         from tokusan.exceptions import AIInterpretationError
 
         with patch.dict(os.environ, {'GEMINI_API_KEY': 'test_key'}):
             with patch('tokusan.ai_interpreter._check_gemini_available', return_value=False):
                 from tokusan.ai_interpreter import GeminiInterpreter
-                with pytest.raises(AIInterpretationError, match="google-generativeai"):
+                with pytest.raises(AIInterpretationError, match="google-genai"):
                     GeminiInterpreter()
 
     def test_init_with_api_key(self):
@@ -41,7 +41,7 @@ class TestGeminiInterpreter:
                 from tokusan.ai_interpreter import GeminiInterpreter
                 interpreter = GeminiInterpreter()
                 assert interpreter.api_key == 'test_key'
-                assert interpreter.model_name == 'gemini-1.5-flash'
+                assert interpreter.model_name == 'gemini-2.5-flash'
 
     def test_init_with_custom_model(self):
         """Test initialization with custom model name."""
@@ -97,15 +97,14 @@ class TestGeminiInterpreter:
             with patch('tokusan.ai_interpreter._check_gemini_available', return_value=True):
                 from tokusan.ai_interpreter import GeminiInterpreter
 
-                # Mock the Gemini model
                 mock_response = MagicMock()
                 mock_response.text = "この記事はフェイクニュースと判定されました。"
 
-                mock_model = MagicMock()
-                mock_model.generate_content.return_value = mock_response
+                mock_client = MagicMock()
+                mock_client.models.generate_content.return_value = mock_response
 
                 interpreter = GeminiInterpreter()
-                interpreter._model = mock_model
+                interpreter._client = mock_client
 
                 result = interpreter.interpret(
                     text="テストテキスト",
@@ -116,23 +115,21 @@ class TestGeminiInterpreter:
                 )
 
                 assert result == "この記事はフェイクニュースと判定されました。"
-                mock_model.generate_content.assert_called_once()
+                mock_client.models.generate_content.assert_called_once()
 
     def test_interpret_api_error(self):
-        """Test that API errors are wrapped in AIInterpretationError."""
-        from tokusan.exceptions import AIInterpretationError
-
+        """Test that API errors propagate from interpret()."""
         with patch.dict(os.environ, {'GEMINI_API_KEY': 'test_key'}):
             with patch('tokusan.ai_interpreter._check_gemini_available', return_value=True):
                 from tokusan.ai_interpreter import GeminiInterpreter
 
-                mock_model = MagicMock()
-                mock_model.generate_content.side_effect = Exception("API error")
+                mock_client = MagicMock()
+                mock_client.models.generate_content.side_effect = Exception("API error")
 
                 interpreter = GeminiInterpreter()
-                interpreter._model = mock_model
+                interpreter._client = mock_client
 
-                with pytest.raises(AIInterpretationError, match="API error"):
+                with pytest.raises(Exception, match="API error"):
                     interpreter.interpret(
                         text="テスト",
                         predicted_class="Fake",
@@ -291,41 +288,37 @@ class TestPredictionResultAiIntegration:
                     with pytest.raises(AIInterpretationError, match="API failed"):
                         _ = result.summary_jp
 
-    def test_summary_jp_fallback_on_error(self):
-        """Test that summary_jp falls back to template when fallback_to_template=True."""
+    def test_summary_jp_fallback_when_ai_unavailable(self):
+        """Test that summary_jp falls back to template when AI is unavailable."""
         from tokusan.results import PredictionResult, ExplanationResult
-        from tokusan.exceptions import AIInterpretationError
 
-        with patch.dict(os.environ, {'GEMINI_API_KEY': 'test_key'}):
-            with patch('tokusan.ai_interpreter._check_gemini_available', return_value=True):
-                mock_interpreter = MagicMock()
-                mock_interpreter.interpret.side_effect = Exception("API failed")
+        with patch.dict(os.environ, {}, clear=True):
+            os.environ.pop('GEMINI_API_KEY', None)
 
-                explanation = ExplanationResult(
-                    word_weights=[("テスト", 0.1)],
-                    class_name="Fake",
-                    class_names=["Fake", "Real"],
-                    probability=0.8,
-                    probabilities={"Fake": 0.8, "Real": 0.2},
-                    sentences_jp=["テンプレート説明"],
-                    sentences_en=["Template explanation"],
-                )
+            explanation = ExplanationResult(
+                word_weights=[("テスト", 0.1)],
+                class_name="Fake",
+                class_names=["Fake", "Real"],
+                probability=0.8,
+                probabilities={"Fake": 0.8, "Real": 0.2},
+                sentences_jp=["テンプレート説明"],
+                sentences_en=["Template explanation"],
+            )
 
-                result = PredictionResult(
-                    text="テストテキスト",
-                    predicted_class="Fake",
-                    predicted_label=0,
-                    probabilities={"Fake": 0.8, "Real": 0.2},
-                    class_names=["Fake", "Real"],
-                    explanation=explanation,
-                    use_ai=True,
-                    fallback_to_template=True,  # Should fall back
-                )
+            result = PredictionResult(
+                text="テストテキスト",
+                predicted_class="Fake",
+                predicted_label=0,
+                probabilities={"Fake": 0.8, "Real": 0.2},
+                class_names=["Fake", "Real"],
+                explanation=explanation,
+                use_ai=True,
+                fallback_to_template=True,
+            )
 
-                with patch('tokusan.ai_interpreter.GeminiInterpreter', return_value=mock_interpreter):
-                    summary = result.summary_jp
-                    # Should get template, not raise error
-                    assert "予測結果: Fake" in summary
+            with patch('tokusan.ai_interpreter._check_gemini_available', return_value=False):
+                summary = result.summary_jp
+                assert "予測結果: Fake" in summary
 
     def test_use_ai_false_skips_ai(self):
         """Test that use_ai=False skips AI even with API key set."""

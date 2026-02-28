@@ -1,67 +1,21 @@
-"""
-Custom exceptions for the tokusan package.
-
-This module defines exception classes used throughout the tokusan library
-to provide clear error messages for various failure conditions.
-"""
+"""Custom exceptions for the tokusan package."""
 
 
 class TokusanError(Exception):
-    """
-    Base exception class for all tokusan-related errors.
-
-    This exception serves as the parent class for more specific exceptions
-    and can be used to catch any error raised by the tokusan library.
-
-    Example:
-        >>> try:
-        ...     explainer.explain_instance(text, classifier_fn)
-        ... except TokusanError as e:
-        ...     print(f"Tokusan error: {e}")
-    """
+    """Base exception for all tokusan-related errors."""
     pass
 
 
 class TokenizerError(TokusanError):
-    """
-    Raised when tokenization fails or is misconfigured.
-
-    This exception is raised when:
-    - The Japanese tokenizer (Sudachi) is not installed but required
-    - Tokenization produces unexpected results
-    - Custom tokenizer functions fail
-    """
+    """Raised when tokenization fails or is misconfigured."""
     pass
 
 
 class ExplanationError(TokusanError):
-    """
-    Raised when explanation generation fails.
-
-    This exception is raised when:
-    - Invalid label index is requested
-    - Explanation mode is incorrectly specified
-    - Required explanation data is missing
-    - Input text contains no analyzable tokens after filtering
-      (all tokens are stopwords or punctuation/symbols)
-    """
+    """Raised when explanation generation fails."""
     pass
 
 
 class AIInterpretationError(TokusanError):
-    """
-    Raised when AI-powered interpretation fails.
-
-    This exception is raised when:
-    - GEMINI_API_KEY environment variable is not set
-    - google-generativeai package is not installed
-    - Gemini API call fails (network error, rate limit, etc.)
-    - AI response cannot be parsed
-
-    Example:
-        >>> try:
-        ...     interpretation = interpreter.interpret(...)
-        ... except AIInterpretationError as e:
-        ...     print(f"AI interpretation failed: {e}")
-    """
+    """Raised when AI-powered interpretation fails."""
     pass

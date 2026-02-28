@@ -35,5 +35,79 @@
             <p>Powered by Tokusan</p>
         </footer>
     </div>
+    <!-- Metric tooltip (event delegation — works for htmx-injected content) -->
+    <script>
+    (function () {
+        var METRIC_INFO = {
+            precision: {
+                title: '適合率とは？',
+                body: '抽出された情報の中で関連性の高い情報がどれくらいあったかの割合です。英語では Precision と呼ばれます。この値が高いということは偽陽性を減らせているという意味合いになります。\n\n例）フェイクニュースと本当のニュースを分類するモデルがあったとして、適合率とはモデルがフェイクと分類したニュースの中で実際にフェイクだったニュースがどれくらいあるかの割合となります。',
+            },
+            recall: {
+                title: '再現率とは？',
+                body: '関連性のある情報がどれくらい抽出されたかの割合を示しています。英語では Recall と呼ばれます。この値が高いということは偽陰性を減らせているという意味合いになります。\n\n例）フェイクニュースと本当のニュースを分類するモデルがあったとして、再現率とは全てのフェイクニュースの中でモデルがフェイクと分類することができたニュースがどれくらいあったかの割合を表しています。',
+            },
+            f1: {
+                title: 'F1値とは？',
+                body: 'それぞれのクラスに正しく分類されたデータの比率を表した値。適合率と再現率の値を組み合わせて計算された総合評価です。',
+            },
+        };
+
+        var activeBtn = null;
+
+        function getTooltip() {
+            return document.getElementById('metric-tooltip');
+        }
+
+        function showTooltip(btn, metric) {
+            var tooltip = getTooltip();
+            if (!tooltip) return;
+            var info = METRIC_INFO[metric];
+            if (!info) return;
+
+            tooltip.innerHTML =
+                '<p style="font-weight:600;margin-bottom:0.25rem;">' + info.title + '</p>' +
+                info.body.split('\n\n').map(function(p) {
+                    return '<p style="margin-bottom:0.25rem;">' + p + '</p>';
+                }).join('');
+
+            tooltip.style.pointerEvents = 'auto';
+            tooltip.style.display = 'block';
+
+            var rect = btn.getBoundingClientRect();
+            var top = rect.bottom + window.scrollY + 6;
+            var left = rect.left + window.scrollX - 200;
+            if (left < 8) left = 8;
+            if (left + 320 > window.innerWidth) left = window.innerWidth - 328;
+
+            tooltip.style.top = top + 'px';
+            tooltip.style.left = left + 'px';
+        }
+
+        function hideTooltip() {
+            var tooltip = getTooltip();
+            if (tooltip) {
+                tooltip.style.display = 'none';
+                tooltip.style.pointerEvents = 'none';
+            }
+            activeBtn = null;
+        }
+
+        document.addEventListener('click', function (e) {
+            var btn = e.target.closest('.metric-help-btn');
+            if (btn) {
+                e.stopPropagation();
+                if (activeBtn === btn) {
+                    hideTooltip();
+                } else {
+                    activeBtn = btn;
+                    showTooltip(btn, btn.dataset.metric);
+                }
+                return;
+            }
+            hideTooltip();
+        });
+    }());
+    </script>
 </body>
 </html>

@@ -1,3 +1,39 @@
+# Tokusan Project Context & Worklog
+
+## Project Overview
+
+This is a Python library (LIME.JP / Tokusan) that extends LIME for Japanese NLP text classification. It provides plain-sentence explanations in Japanese for machine learning model output, alongside visualizations and metrics.
+
+**Core problem:** Humanities scholars with less technical backgrounds view ML models as a "black box." Japanese text adds extra challenges: no word boundaries (requires SudachiPy tokenization), context-dependent semantics, and English-centric existing tools.
+
+**What Tokusan does:**
+1. Japanese text processing — SudachiPy tokenizer (SplitMode.C) integrated into LIME's TextExplainer
+2. Plain language explanations — Generates Japanese sentences describing which words influenced the classification and how strongly
+3. Web UI — FastAPI + htmx + Tailwind app for interactive classification with AI-powered (Gemini) interpretation
+
+**Architecture:**
+- `tokusan/` — Core library: classifier, explainer, Japanese tokenization, AI interpreter
+- `web/` — FastAPI web application with htmx-driven UI
+- `tests/` — pytest test suite
+
+**Key technical decisions:**
+- SudachiPy SplitMode.C (longest units) to preserve compound words
+- LIME requires `predict_proba` — LinearSVC is wrapped in `CalibratedClassifierCV`
+- MultinomialNB uses `CountVectorizer` (not TF-IDF) since it expects count data
+- `lang='jp'` parameter must NOT be passed to TextExplainer (it silently overrides `split_expression`)
+
+**Reference repository:** https://github.com/noyuri2z/lime_jp (original forked LIME work)
+
+## Development Guidelines
+
+1. Docstrings should be one or two sentences; inline comments as concise as possible.
+2. Avoid writing code that uses try/except lines.
+3. Do not include emoji anywhere in the code or writing. This is an academic project.
+4. Always ask if Japanese sentences are correct when generating Japanese for docstrings/comments or output explanations.
+5. Refer to the worklog entries below for context on past changes.
+
+---
+
 # Worklog
 
 ## 2026-02-28: Fix metric tooltips and improve classifier performance

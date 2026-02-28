@@ -26,6 +26,15 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 SAMPLES_DIR = BASE_DIR / "samples"
 
 
+def _error_response(request: Request, error: str, hint: str = "", status_code: int = 400):
+    """Return an error partial HTML response."""
+    return templates.TemplateResponse(
+        "partials/error.html",
+        {"request": request, "error": error, "hint": hint},
+        status_code=status_code,
+    )
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     """Main page with all forms."""
@@ -52,51 +61,31 @@ async def upload_csv(request: Request, file: UploadFile = File(...)):
     session_id = request.cookies.get("session_id")
     session = app_state.get_or_create_session(session_id)
 
-    try:
-        content = await file.read()
-        df = pd.read_csv(StringIO(content.decode("utf-8")))
+    content = await file.read()
+    df = pd.read_csv(StringIO(content.decode("utf-8")))
 
-        # Validate required columns
-        if "text" not in df.columns or "label" not in df.columns:
-            return templates.TemplateResponse(
-                "partials/error.html",
-                {
-                    "request": request,
-                    "error": "CSVには 'text' と 'label' の列が必要です。"
-                    f"検出された列：{', '.join(df.columns)}",
-                    "hint": "CSVファイルを修正して、もう一度アップロードしてください。",
-                },
-                status_code=400,
-            )
-
-        # Store in session
-        session.training_data = df
-
-        # Get unique labels
-        unique_labels = sorted(df["label"].unique())
-
-        response = templates.TemplateResponse(
-            "partials/config_form.html",
-            {
-                "request": request,
-                "num_samples": len(df),
-                "unique_labels": unique_labels,
-                "suggested_classes": [f"Class_{l}" for l in unique_labels],
-            },
+    if "text" not in df.columns or "label" not in df.columns:
+        return _error_response(
+            request,
+            error="CSVには 'text' と 'label' の列が必要です。"
+            f"検出された列：{', '.join(df.columns)}",
+            hint="CSVファイルを修正して、もう一度アップロードしてください。",
         )
-        response.set_cookie("session_id", session.session_id, httponly=True)
-        return response
 
-    except Exception as e:
-        return templates.TemplateResponse(
-            "partials/error.html",
-            {
-                "request": request,
-                "error": f"CSVの読み込みに失敗しました：{str(e)}",
-                "hint": "ファイル形式を確認して、もう一度お試しください。",
-            },
-            status_code=400,
-        )
+    session.training_data = df
+    unique_labels = sorted(df["label"].unique())
+
+    response = templates.TemplateResponse(
+        "partials/config_form.html",
+        {
+            "request": request,
+            "num_samples": len(df),
+            "unique_labels": unique_labels,
+            "suggested_classes": [f"Class_{l}" for l in unique_labels],
+        },
+    )
+    response.set_cookie("session_id", session.session_id, httponly=True)
+    return response
 
 
 @app.post("/api/load-sample", response_class=HTMLResponse)
@@ -163,64 +152,41 @@ async def train_model(
     session = app_state.get_or_create_session(session_id)
 
     if session.training_data is None:
-        return templates.TemplateResponse(
-            "partials/error.html",
-            {
-                "request": request,
-                "error": "学習データがアップロードされていません。まずCSVをアップロードしてください。",
-                "hint": "ステップ1からCSVをアップロードしてください。",
-            },
-            status_code=400,
+        return _error_response(
+            request,
+            error="学習データがアップロードされていません。まずCSVをアップロードしてください。",
+            hint="ステップ1からCSVをアップロードしてください。",
         )
 
-    try:
-        # Parse class names
-        names = [n.strip() for n in re.split(r"[,、]", class_names) if n.strip()]
-        if len(names) < 2:
-            return templates.TemplateResponse(
-                "partials/error.html",
-                {
-                    "request": request,
-                    "error": "クラス名を2つ以上入力してください。",
-                    "hint": "カンマ区切りで2つ以上のクラス名を入力してください。",
-                },
-                status_code=400,
-            )
-
-        # Create and train classifier
-        clf = JapaneseTextClassifier(
-            class_names=names, classifier_type=classifier_type
+    names = [n.strip() for n in re.split(r"[,、]", class_names) if n.strip()]
+    if len(names) < 2:
+        return _error_response(
+            request,
+            error="クラス名を2つ以上入力してください。",
+            hint="カンマ区切りで2つ以上のクラス名を入力してください。",
         )
 
-        df = session.training_data
-        result = clf.train(df["text"].tolist(), df["label"].tolist())
+    clf = JapaneseTextClassifier(
+        class_names=names, classifier_type=classifier_type
+    )
 
-        # Store in session
-        session.classifier = clf
-        session.training_result = result
-        session.class_names = names
-        session.classifier_type = classifier_type
+    df = session.training_data
+    result = clf.train(df["text"].tolist(), df["label"].tolist())
 
-        response = templates.TemplateResponse(
-            "partials/training_result.html",
-            {
-                "request": request,
-                "result": result,
-            },
-        )
-        response.set_cookie("session_id", session.session_id, httponly=True)
-        return response
+    session.classifier = clf
+    session.training_result = result
+    session.class_names = names
+    session.classifier_type = classifier_type
 
-    except Exception as e:
-        return templates.TemplateResponse(
-            "partials/error.html",
-            {
-                "request": request,
-                "error": f"学習に失敗しました：{str(e)}",
-                "hint": "設定を確認して、もう一度「モデルを学習」を押してください。",
-            },
-            status_code=500,
-        )
+    response = templates.TemplateResponse(
+        "partials/training_result.html",
+        {
+            "request": request,
+            "result": result,
+        },
+    )
+    response.set_cookie("session_id", session.session_id, httponly=True)
+    return response
 
 
 @app.post("/api/predict", response_class=HTMLResponse)
@@ -233,17 +199,12 @@ async def predict_text(
     session = app_state.get_or_create_session(session_id)
 
     if session.classifier is None or not session.classifier.is_trained:
-        return templates.TemplateResponse(
-            "partials/error.html",
-            {
-                "request": request,
-                "error": "学習済みモデルがありません。データをアップロードして学習を行ってください。",
-                "hint": "ステップ1からやり直してください。",
-            },
-            status_code=400,
+        return _error_response(
+            request,
+            error="学習済みモデルがありません。データをアップロードして学習を行ってください。",
+            hint="ステップ1からやり直してください。",
         )
 
-    # Determine AI availability and reason for unavailability
     ai_available = is_ai_available()
     if not ai_available:
         if not _check_gemini_available():
@@ -253,38 +214,25 @@ async def predict_text(
     else:
         ai_fallback_reason = None
 
-    try:
-        result = session.classifier.predict(
-            text=text,
-            explain=True,
-            use_ai=True,
-            fallback_to_template=True,
-        )
+    result = session.classifier.predict(
+        text=text,
+        explain=True,
+        use_ai=True,
+        fallback_to_template=True,
+    )
 
-        # Calculate max weight for visualization
-        max_weight = 1.0
-        if result.explanation and result.explanation.word_weights:
-            max_weight = max(abs(w) for _, w in result.explanation.word_weights)
+    max_weight = 1.0
+    if result.explanation and result.explanation.word_weights:
+        max_weight = max(abs(w) for _, w in result.explanation.word_weights)
 
-        return templates.TemplateResponse(
-            "partials/prediction_result.html",
-            {
-                "request": request,
-                "result": result,
-                "text": text,
-                "max_weight": max_weight,
-                "ai_available": ai_available,
-                "ai_fallback_reason": ai_fallback_reason,
-            },
-        )
-
-    except Exception as e:
-        return templates.TemplateResponse(
-            "partials/error.html",
-            {
-                "request": request,
-                "error": f"分類に失敗しました：{str(e)}",
-                "hint": "テキストを確認して、もう一度お試しください。",
-            },
-            status_code=500,
-        )
+    return templates.TemplateResponse(
+        "partials/prediction_result.html",
+        {
+            "request": request,
+            "result": result,
+            "text": text,
+            "max_weight": max_weight,
+            "ai_available": ai_available,
+            "ai_fallback_reason": ai_fallback_reason,
+        },
+    )

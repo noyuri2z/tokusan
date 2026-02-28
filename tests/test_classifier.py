@@ -1,15 +1,4 @@
-"""
-Tests for the JapaneseTextClassifier module.
-
-This module tests the end-to-end classifier functionality including:
-- Initialization
-- Training
-- Prediction with explanation
-- Model persistence (save/load)
-- Result classes
-
-Run tests with: pytest tests/test_classifier.py -v
-"""
+"""Tests for the JapaneseTextClassifier module."""
 
 import os
 import tempfile
@@ -18,10 +7,6 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-
-# =============================================================================
-# Test Imports
-# =============================================================================
 
 class TestClassifierImports:
     """Test that classifier module imports correctly."""
@@ -38,10 +23,6 @@ class TestClassifierImports:
         assert PredictionResult is not None
         assert ExplanationResult is not None
 
-
-# =============================================================================
-# Test Result Classes
-# =============================================================================
 
 class TestTrainingResult:
     """Test TrainingResult class."""
@@ -376,10 +357,6 @@ class TestPredictionResult:
         assert "prediction-result" in html
 
 
-# =============================================================================
-# Test JapaneseTextClassifier
-# =============================================================================
-
 class TestJapaneseTextClassifierInit:
     """Test JapaneseTextClassifier initialization."""
 
@@ -415,8 +392,7 @@ class TestJapaneseTextClassifierInit:
             stopwords=custom,
         )
 
-        # User stopwords are merged with the default Japanese stopwords
-        assert stopwords.issubset(clf.stopwords)
+        assert custom.issubset(clf.stopwords)
         assert JAPANESE_STOPWORDS.issubset(clf.stopwords)
         # Custom stopwords should be merged with JAPANESE_STOPWORDS
         assert 'カスタム語' in clf.stopwords
@@ -682,10 +658,6 @@ class TestJapaneseTextClassifierPersistence:
                 clf.save(path)
 
 
-# =============================================================================
-# Integration Tests
-# =============================================================================
-
 class TestEndToEndWorkflow:
     """Integration tests for the complete workflow."""
 
@@ -743,10 +715,6 @@ class TestEndToEndWorkflow:
             assert result.predicted_class in ['Real', 'Fake']
             assert result.explanation is not None
 
-
-# =============================================================================
-# Run Tests
-# =============================================================================
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
