@@ -101,6 +101,10 @@ async def load_sample(request: Request, sample: str = Form("fakenews")):
             "file": "wrime_sample.csv",
             "suggested_classes": ["喜び", "悲しみ", "期待", "驚き", "怒り", "恐れ", "嫌悪", "信頼"],
         },
+        "spam": {
+            "file": "spam_sample.csv",
+            "suggested_classes": ["通常メール", "迷惑メール"],
+        },
     }
     config = sample_config.get(sample)
     if config is None:
