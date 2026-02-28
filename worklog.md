@@ -1,5 +1,26 @@
 # Worklog
 
+## 2026-02-28: Fix metric tooltips and improve classifier performance
+
+**Files changed:** `tokusan/classifier.py`, `web/templates/partials/training_result.html`
+
+**Bug fix — metric tooltip buttons not appearing:**
+- The `?` buttons next to 適合率/再現率/F1値 used Tailwind utility classes, but the training result HTML is injected via htmx after page load. The Tailwind CDN may not generate CSS for classes that only appear in dynamically swapped content.
+- Fix: replaced Tailwind classes with inline styles on the buttons and tooltip container; replaced `classList.add/remove('hidden')` with `style.display` toggling.
+
+**Classifier performance improvements:**
+- `TfidfVectorizer`: Added `min_df=2, max_df=0.95` to filter noise (single-occurrence terms) and non-discriminative terms (appearing in >95% of documents).
+- `MultinomialNB`: Switched from `TfidfVectorizer` to `CountVectorizer` — MultinomialNB expects count data, not TF-IDF floats.
+- `LogisticRegression` and `LinearSVC`: Added `class_weight='balanced'` to compensate for class imbalance.
+- `RandomForestClassifier`: Changed `max_depth` default from `None` (unlimited) to `50` to reduce overfitting on sparse TF-IDF features. Added `class_weight='balanced'`.
+- `train_test_split`: Added `stratify=labels_array` to preserve class distribution in train/test split (critical for multi-class datasets like WRIME with 8 classes).
+- `save()`/`load()`: Updated to handle `CountVectorizer` for naive_bayes models (`idf_` attribute doesn't exist on CountVectorizer).
+
+**Verification:**
+- `pytest tests/test_tokusan.py -v` → 71 passed, 1 pre-existing failure (unrelated)
+- `pytest tests/test_classifier.py -v` → 40 passed, 1 pre-existing test bug (unrelated)
+- Save/load tests pass for all classifier types
+
 ## 2026-02-28: Add WRIME emotion dataset as bundled sample
 
 **Files changed:**

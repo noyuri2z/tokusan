@@ -31,7 +31,7 @@ import joblib
 import numpy as np
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
@@ -186,24 +186,37 @@ class JapaneseTextClassifier:
         Returns:
             Pipeline: sklearn Pipeline with vectorizer and classifier.
         """
-        # Create TF-IDF vectorizer with our tokenizer
-        vectorizer = TfidfVectorizer(
-            tokenizer=self._tokenizer,
-            token_pattern=None,
-            max_features=self.max_features,
-        )
+        # Naive Bayes needs raw counts; all others use TF-IDF
+        if self.classifier_type == 'naive_bayes':
+            vectorizer = CountVectorizer(
+                tokenizer=self._tokenizer,
+                token_pattern=None,
+                max_features=self.max_features,
+                min_df=2,
+                max_df=0.95,
+            )
+        else:
+            vectorizer = TfidfVectorizer(
+                tokenizer=self._tokenizer,
+                token_pattern=None,
+                max_features=self.max_features,
+                min_df=2,
+                max_df=0.95,
+            )
 
         # Create classifier based on type
         if self.classifier_type == 'logistic_regression':
             clf = LogisticRegression(
                 max_iter=2000,
+                class_weight='balanced',
                 random_state=self.random_state,
                 **self.classifier_kwargs,
             )
         elif self.classifier_type == 'random_forest':
             clf = RandomForestClassifier(
                 n_estimators=self.classifier_kwargs.get('n_estimators', 300),
-                max_depth=self.classifier_kwargs.get('max_depth', None),
+                max_depth=self.classifier_kwargs.get('max_depth', 50),
+                class_weight='balanced',
                 random_state=self.random_state,
                 n_jobs=-1,
                 **{k: v for k, v in self.classifier_kwargs.items()
@@ -212,6 +225,7 @@ class JapaneseTextClassifier:
         elif self.classifier_type == 'linear_svc':
             clf = CalibratedClassifierCV(
                 LinearSVC(
+                    class_weight='balanced',
                     random_state=self.random_state,
                     max_iter=2000,
                     **self.classifier_kwargs,
@@ -256,12 +270,13 @@ class JapaneseTextClassifier:
         texts_list = list(texts)
         labels_array = np.array(labels)
 
-        # Split data
+        # Split data (stratified to preserve class distribution)
         X_train, X_test, y_train, y_test = train_test_split(
             texts_list,
             labels_array,
             test_size=test_size,
             random_state=self.random_state,
+            stratify=labels_array,
         )
 
         # Create and train pipeline
@@ -533,7 +548,7 @@ class JapaneseTextClassifier:
         save_data = {
             # Fitted model components
             'tfidf_vocabulary': tfidf.vocabulary_,
-            'tfidf_idf': tfidf.idf_,
+            'tfidf_idf': getattr(tfidf, 'idf_', None),
             'classifier': classifier,
             # Configuration for reconstruction
             'class_names': self.class_names,
@@ -574,20 +589,28 @@ class JapaneseTextClassifier:
             **save_data['classifier_kwargs'],
         )
 
-        # Reconstruct the TF-IDF vectorizer with our tokenizer
-        tfidf = TfidfVectorizer(
-            tokenizer=instance._tokenizer,
-            token_pattern=None,
-            max_features=instance.max_features,
-            vocabulary=save_data['tfidf_vocabulary'],
-        )
-        # Set the fitted IDF values
-        tfidf.idf_ = save_data['tfidf_idf']
-        tfidf._tfidf._idf_diag = None  # Will be rebuilt on first transform
+        # Reconstruct the vectorizer (CountVectorizer for naive_bayes, TfidfVectorizer otherwise)
+        if instance.classifier_type == 'naive_bayes':
+            vectorizer = CountVectorizer(
+                tokenizer=instance._tokenizer,
+                token_pattern=None,
+                max_features=instance.max_features,
+                vocabulary=save_data['tfidf_vocabulary'],
+            )
+        else:
+            vectorizer = TfidfVectorizer(
+                tokenizer=instance._tokenizer,
+                token_pattern=None,
+                max_features=instance.max_features,
+                vocabulary=save_data['tfidf_vocabulary'],
+            )
+            # Set the fitted IDF values
+            vectorizer.idf_ = save_data['tfidf_idf']
+            vectorizer._tfidf._idf_diag = None  # Will be rebuilt on first transform
 
         # Reconstruct the pipeline
         instance._pipeline = Pipeline([
-            ('tfidf', tfidf),
+            ('tfidf', vectorizer),
             ('clf', save_data['classifier']),
         ])
 

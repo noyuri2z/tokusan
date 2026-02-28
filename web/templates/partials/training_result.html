@@ -25,8 +25,7 @@
 
 <!-- Metric tooltips -->
 <div id="metric-tooltip"
-     class="hidden fixed z-50 max-w-xs bg-white border border-gray-200 rounded-lg shadow-lg p-4 text-sm text-gray-700"
-     style="pointer-events: none;">
+     style="display:none;position:fixed;z-index:50;max-width:20rem;background:#fff;border:1px solid #e5e7eb;border-radius:0.5rem;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);padding:1rem;font-size:0.875rem;color:#374151;pointer-events:none;">
 </div>
 
 <div class="overflow-x-auto">
@@ -37,21 +36,24 @@
                 <th class="px-3 py-2 text-right">
                     <span class="inline-flex items-center gap-1 justify-end">
                         適合率
-                        <button type="button" class="metric-help-btn w-4 h-4 rounded-full bg-gray-400 text-white text-xs leading-none flex items-center justify-center hover:bg-gray-600"
+                        <button type="button" class="metric-help-btn"
+                                style="display:inline-flex;align-items:center;justify-content:center;width:1rem;height:1rem;border-radius:9999px;background:#9ca3af;color:#fff;font-size:0.7rem;line-height:1;cursor:pointer;border:none;padding:0;"
                                 data-metric="precision">?</button>
                     </span>
                 </th>
                 <th class="px-3 py-2 text-right">
                     <span class="inline-flex items-center gap-1 justify-end">
                         再現率
-                        <button type="button" class="metric-help-btn w-4 h-4 rounded-full bg-gray-400 text-white text-xs leading-none flex items-center justify-center hover:bg-gray-600"
+                        <button type="button" class="metric-help-btn"
+                                style="display:inline-flex;align-items:center;justify-content:center;width:1rem;height:1rem;border-radius:9999px;background:#9ca3af;color:#fff;font-size:0.7rem;line-height:1;cursor:pointer;border:none;padding:0;"
                                 data-metric="recall">?</button>
                     </span>
                 </th>
                 <th class="px-3 py-2 text-right">
                     <span class="inline-flex items-center gap-1 justify-end">
                         F1値
-                        <button type="button" class="metric-help-btn w-4 h-4 rounded-full bg-gray-400 text-white text-xs leading-none flex items-center justify-center hover:bg-gray-600"
+                        <button type="button" class="metric-help-btn"
+                                style="display:inline-flex;align-items:center;justify-content:center;width:1rem;height:1rem;border-radius:9999px;background:#9ca3af;color:#fff;font-size:0.7rem;line-height:1;cursor:pointer;border:none;padding:0;"
                                 data-metric="f1">?</button>
                     </span>
                 </th>
@@ -110,7 +112,7 @@
                 info.body.split('\n\n').map(p => '<p class="mb-1 last:mb-0">' + p + '</p>').join('');
 
             tooltip.style.pointerEvents = 'auto';
-            tooltip.classList.remove('hidden');
+            tooltip.style.display = 'block';
 
             const rect = btn.getBoundingClientRect();
             const scrollY = window.scrollY;
@@ -126,7 +128,7 @@
         }
 
         function hideTooltip() {
-            tooltip.classList.add('hidden');
+            tooltip.style.display = 'none';
             tooltip.style.pointerEvents = 'none';
             activeBtn = null;
         }
