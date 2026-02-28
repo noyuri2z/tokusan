@@ -1,5 +1,24 @@
 # Worklog
 
+## 2026-02-28: Add WRIME emotion dataset as bundled sample
+
+**Files changed:**
+- `web/samples/wrime_sample.csv` (new)
+- `web/app.py`
+- `web/templates/index.html`
+
+**Context:** Added the WRIME dataset (Japanese SNS posts annotated with 8 Plutchik emotions) as a third bundled sample. Task: given a Japanese SNS post, predict the dominant reader-perceived emotion. Labels are derived by taking `argmax` of the 8 `Avg. Readers_*` columns (joy/sadness/anticipation/surprise/anger/fear/disgust/trust, scale 0–3). Rows where all avg_reader scores are 0 are excluded. Data downloaded directly from `https://raw.githubusercontent.com/ids-cv/wrime/master/wrime-ver1.tsv` (HuggingFace `datasets` loader is incompatible with the legacy `wrime.py` script in newer library versions).
+
+**Changes:**
+- `wrime_sample.csv`: 1,175 rows across 8 emotion classes (150 per class except trust which has 125), columns `text` and `label`. Stratified sample with `random_state=42`.
+- `web/app.py` `/api/load-sample`: Replaced the flat `sample_files` dict with a `sample_config` dict that also carries per-sample `suggested_classes`. WRIME entry provides `["喜び", "悲しみ", "期待", "驚き", "怒り", "恐れ", "嫌悪", "信頼"]` pre-filled; fakenews and ramen use `None` (auto-generates `Class_N`).
+- `web/templates/index.html` sample tab panel: Added a purple button "感情分析（WRIME・1175件）" with hidden `<input name="sample" value="wrime">`.
+
+**Verification:**
+- `wrime_sample.csv`: 1175 rows, 0 empty text values, all 8 labels present
+- Click "感情分析（WRIME・1175件）" → config form loads with 喜び/悲しみ/期待/驚き/怒り/恐れ/嫌悪/信頼 pre-filled as class names
+- Existing fakenews and ramen buttons unaffected
+
 ## 2026-02-28: Add LinearSVC and Naive Bayes classifier options
 
 **Files changed:** `tokusan/classifier.py`, `web/templates/partials/config_form.html`

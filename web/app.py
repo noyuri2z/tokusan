@@ -105,19 +105,23 @@ async def load_sample(request: Request, sample: str = Form("fakenews")):
     session_id = request.cookies.get("session_id")
     session = app_state.get_or_create_session(session_id)
 
-    sample_files = {
-        "fakenews": "fakenews_sample.csv",
-        "ramen": "ramen_review_sample.csv",
+    sample_config = {
+        "fakenews": {"file": "fakenews_sample.csv", "suggested_classes": None},
+        "ramen": {"file": "ramen_review_sample.csv", "suggested_classes": None},
+        "wrime": {
+            "file": "wrime_sample.csv",
+            "suggested_classes": ["喜び", "悲しみ", "期待", "驚き", "怒り", "恐れ", "嫌悪", "信頼"],
+        },
     }
-    filename = sample_files.get(sample)
-    if filename is None:
+    config = sample_config.get(sample)
+    if config is None:
         return templates.TemplateResponse(
             "partials/error.html",
             {"request": request, "error": f"不明なサンプル名: {sample}", "hint": ""},
             status_code=400,
         )
 
-    sample_path = SAMPLES_DIR / filename
+    sample_path = SAMPLES_DIR / config["file"]
     if not sample_path.exists():
         return templates.TemplateResponse(
             "partials/error.html",
@@ -133,13 +137,15 @@ async def load_sample(request: Request, sample: str = Form("fakenews")):
     session.training_data = df
 
     unique_labels = sorted(df["label"].unique())
+    preset = config["suggested_classes"]
+    suggested = preset if preset is not None else [f"Class_{l}" for l in unique_labels]
     response = templates.TemplateResponse(
         "partials/config_form.html",
         {
             "request": request,
             "num_samples": len(df),
             "unique_labels": unique_labels,
-            "suggested_classes": [f"Class_{l}" for l in unique_labels],
+            "suggested_classes": suggested,
         },
     )
     response.set_cookie("session_id", session.session_id, httponly=True)
