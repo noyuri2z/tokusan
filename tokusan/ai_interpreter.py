@@ -1,5 +1,6 @@
 """AI-powered interpretation using Google Gemini."""
 
+import importlib.util
 import os
 from typing import Dict, List, Optional, Tuple
 
@@ -8,44 +9,24 @@ from .exceptions import AIInterpretationError
 
 def _check_gemini_available() -> bool:
     """Check if google-genai package is available."""
-    try:
-        from google import genai
-        return True
-    except ImportError:
-        return False
+    return importlib.util.find_spec("google.genai") is not None
 
 
 class GeminiInterpreter:
-    """
-    Generate AI-powered interpretations of classification results using Google Gemini.
-
-    Attributes:
-        model_name: Name of the Gemini model to use.
-    """
+    """Generate AI-powered interpretations of classification results using Google Gemini."""
 
     def __init__(self, model_name: str = "gemini-2.5-flash"):
-        """
-        Initialize the Gemini interpreter.
-
-        Args:
-            model_name: Gemini model to use.
-
-        Raises:
-            AIInterpretationError: If GEMINI_API_KEY is not set or google-genai is not installed.
-        """
-        # Check if package is available
+        """Initialize the Gemini interpreter with the given model name."""
         if not _check_gemini_available():
             raise AIInterpretationError(
                 "google-genai package is not installed. "
                 "Install it with: pip install google-genai"
             )
 
-        # Get API key from environment
         self.api_key = os.environ.get('GEMINI_API_KEY')
         if not self.api_key:
             raise AIInterpretationError(
-                "GEMINI_API_KEY environment variable is not set. "
-                "Please set it with your Gemini API key."
+                "GEMINI_API_KEY environment variable is not set."
             )
 
         self.model_name = model_name
@@ -67,21 +48,18 @@ class GeminiInterpreter:
         class_names: List[str],
     ) -> str:
         """Build the prompt for Gemini."""
-        # Format probabilities
         prob_str = ", ".join(
             f"{name}: {prob:.1%}" for name, prob in probabilities.items()
         )
 
-        # Format word weights
         weight_lines = []
-        for word, weight in word_weights[:15]:  # Limit to top 15 words
+        for word, weight in word_weights[:15]:
             sign = "+" if weight > 0 else ""
             direction = "支持" if weight > 0 else "反対"
             weight_lines.append(f"- 「{word}」: {sign}{weight:.3f} ({predicted_class}を{direction})")
 
         weights_str = "\n".join(weight_lines)
 
-        # Truncate text if too long
         max_text_len = 1000
         display_text = text[:max_text_len]
         if len(text) > max_text_len:
@@ -123,51 +101,25 @@ class GeminiInterpreter:
         word_weights: List[Tuple[str, float]],
         class_names: List[str],
     ) -> str:
-        """
-        Generate a Japanese interpretation of the classification result.
+        """Generate a Japanese interpretation of the classification result."""
+        client = self._get_client()
+        prompt = self._build_prompt(
+            text=text,
+            predicted_class=predicted_class,
+            probabilities=probabilities,
+            word_weights=word_weights,
+            class_names=class_names,
+        )
 
-        Args:
-            text: The original input text that was classified.
-            predicted_class: The predicted class name.
-            probabilities: Dict mapping class names to probabilities.
-            word_weights: List of (word, weight) tuples from LIME explanation.
-            class_names: List of all class names.
-
-        Returns:
-            Japanese interpretation explaining the classification.
-
-        Raises:
-            AIInterpretationError: If the API call fails.
-        """
-        try:
-            client = self._get_client()
-            prompt = self._build_prompt(
-                text=text,
-                predicted_class=predicted_class,
-                probabilities=probabilities,
-                word_weights=word_weights,
-                class_names=class_names,
-            )
-
-            response = client.models.generate_content(
-                model=self.model_name,
-                contents=prompt,
-            )
-            return response.text
-
-        except Exception as e:
-            raise AIInterpretationError(
-                f"Failed to generate AI interpretation: {e}"
-            ) from e
+        response = client.models.generate_content(
+            model=self.model_name,
+            contents=prompt,
+        )
+        return response.text
 
 
 def is_ai_available() -> bool:
-    """
-    Check if AI interpretation is available.
-
-    Returns:
-        True if google-genai is installed and GEMINI_API_KEY is set.
-    """
+    """Return True if google-genai is installed and GEMINI_API_KEY is set."""
     if not _check_gemini_available():
         return False
     return os.environ.get('GEMINI_API_KEY') is not None

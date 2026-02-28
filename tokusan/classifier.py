@@ -1,26 +1,4 @@
-"""
-Japanese text classifier with LIME explanations.
-
-This module provides the JapaneseTextClassifier class for end-to-end
-text classification with built-in support for Japanese tokenization
-and LIME-based explanations.
-
-Example:
-    >>> from tokusan import JapaneseTextClassifier
-    >>>
-    >>> # Create and train
-    >>> clf = JapaneseTextClassifier(class_names=['Fake', 'Real'])
-    >>> result = clf.train(texts, labels)
-    >>> print(result.summary())
-    >>>
-    >>> # Predict with explanation
-    >>> pred = clf.predict("ニュースのテキスト", explain=True)
-    >>> print(pred.summary_jp)
-    >>>
-    >>> # Save and load
-    >>> clf.save('model.pkl')
-    >>> clf2 = JapaneseTextClassifier.load('model.pkl')
-"""
+"""Japanese text classifier with LIME explanations."""
 
 import re
 import unicodedata
@@ -48,7 +26,6 @@ from .japanese import splitter as japanese_splitter, JAPANESE_STOPWORDS
 from .results import ExplanationResult, PredictionResult, TrainingResult
 
 
-# Default punctuation pattern for filtering
 PUNCT_PATTERN = re.compile(
     r"^[\s\u3000。、！？「」『』（）［］【】.,!?()\"'`~:;<>/\[\]{}|+=\-—–…]+$"
 )
@@ -59,30 +36,18 @@ def _default_tokenizer(
     stopwords: Optional[set] = None,
     filter_punct: bool = True,
 ) -> List[str]:
-    """
-    Default Japanese tokenizer using Sudachi.
-
-    Args:
-        text: Text to tokenize.
-        stopwords: Set of stopwords to filter out.
-        filter_punct: Whether to filter punctuation tokens.
-
-    Returns:
-        List of tokens.
-    """
+    """Tokenize Japanese text using Sudachi with optional stopword/punctuation filtering."""
     tokens = japanese_splitter(text)
 
     result = []
     for token in tokens:
-        # Filter punctuation
         if filter_punct and PUNCT_PATTERN.match(token):
             continue
 
-        # Filter single-character hiragana / katakana (never meaningful as features)
+        # Skip single-character hiragana/katakana
         if len(token) == 1 and unicodedata.name(token, '').startswith(('HIRAGANA', 'KATAKANA')):
             continue
 
-        # Filter stopwords
         if stopwords and token in stopwords:
             continue
 
@@ -92,38 +57,7 @@ def _default_tokenizer(
 
 
 class JapaneseTextClassifier:
-    """
-    End-to-end Japanese text classifier with LIME explanations.
-
-    This class provides a complete pipeline for training text classification
-    models on Japanese text, making predictions, and generating human-readable
-    explanations using LIME.
-
-    Attributes:
-        class_names: List of class names (e.g., ['Fake', 'Real']).
-        classifier_type: Type of classifier ('logistic_regression' or 'random_forest').
-        is_trained: Whether the model has been trained.
-
-    Example:
-        >>> # Create classifier
-        >>> clf = JapaneseTextClassifier(
-        ...     class_names=['Fake', 'Real'],
-        ...     classifier_type='logistic_regression'
-        ... )
-        >>>
-        >>> # Train on data
-        >>> import pandas as pd
-        >>> df = pd.read_csv('fakenews.csv')
-        >>> result = clf.train(df['context'], df['label'])
-        >>> print(f"Accuracy: {result.accuracy:.2%}")
-        >>>
-        >>> # Predict with explanation
-        >>> pred = clf.predict("ニュース記事のテキスト", explain=True)
-        >>> print(pred.summary_jp)
-        >>>
-        >>> # Save model
-        >>> clf.save('model.pkl')
-    """
+    """End-to-end Japanese text classifier with LIME explanations and AI interpretation."""
 
     def __init__(
         self,
@@ -137,28 +71,10 @@ class JapaneseTextClassifier:
         random_state: Optional[int] = 42,
         **classifier_kwargs,
     ):
-        """
-        Initialize the Japanese text classifier.
-
-        Args:
-            class_names: List of class names corresponding to label indices.
-                        e.g., ['Fake', 'Real'] where 0='Fake', 1='Real'.
-            classifier_type: Type of classifier to use.
-                           Options: 'logistic_regression', 'random_forest'.
-            max_features: Maximum number of features for TF-IDF vectorizer.
-            stopwords: Optional set of stopwords to filter during tokenization.
-            tokenizer: Optional custom tokenizer function. If None, uses
-                      Sudachi with punctuation and stopword filtering.
-            random_state: Random state for reproducibility.
-            **classifier_kwargs: Additional arguments passed to the classifier.
-
-        Raises:
-            ValueError: If classifier_type is not recognized.
-        """
+        """Initialize with class names, classifier type, and optional configuration."""
         self.class_names = class_names
         self.classifier_type = classifier_type
         self.max_features = max_features
-        # Merge user-provided stopwords with SlothLib Japanese stopwords
         if stopwords is not None:
             self.stopwords = set(stopwords) | set(JAPANESE_STOPWORDS)
         else:
@@ -166,7 +82,6 @@ class JapaneseTextClassifier:
         self.random_state = random_state
         self.classifier_kwargs = classifier_kwargs
 
-        # Set up tokenizer
         if tokenizer is not None:
             self._tokenizer = tokenizer
         else:
@@ -174,19 +89,12 @@ class JapaneseTextClassifier:
                 text, stopwords=self.stopwords, filter_punct=True
             )
 
-        # Initialize model pipeline (will be set during training)
         self._pipeline: Optional[Pipeline] = None
         self._explainer: Optional[TextExplainer] = None
         self.is_trained = False
 
     def _create_pipeline(self) -> Pipeline:
-        """
-        Create the sklearn pipeline with TF-IDF and classifier.
-
-        Returns:
-            Pipeline: sklearn Pipeline with vectorizer and classifier.
-        """
-        # Naive Bayes needs raw counts; all others use TF-IDF
+        """Create the sklearn pipeline with vectorizer and classifier."""
         if self.classifier_type == 'naive_bayes':
             vectorizer = CountVectorizer(
                 tokenizer=self._tokenizer,
@@ -204,7 +112,6 @@ class JapaneseTextClassifier:
                 max_df=0.95,
             )
 
-        # Create classifier based on type
         if self.classifier_type == 'logistic_regression':
             clf = LogisticRegression(
                 max_iter=2000,
@@ -250,27 +157,10 @@ class JapaneseTextClassifier:
         labels: Union[List[int], 'np.ndarray', 'pd.Series'],
         test_size: float = 0.2,
     ) -> TrainingResult:
-        """
-        Train the classifier on the provided data.
-
-        Args:
-            texts: List or Series of text documents.
-            labels: List, array, or Series of integer labels.
-            test_size: Fraction of data to use for testing.
-
-        Returns:
-            TrainingResult: Object containing training metrics.
-
-        Example:
-            >>> result = clf.train(texts, labels, test_size=0.2)
-            >>> print(result.summary())
-            >>> print(f"Accuracy: {result.accuracy:.2%}")
-        """
-        # Convert to lists if needed
+        """Train the classifier and return a TrainingResult with metrics."""
         texts_list = list(texts)
         labels_array = np.array(labels)
 
-        # Split data (stratified to preserve class distribution)
         X_train, X_test, y_train, y_test = train_test_split(
             texts_list,
             labels_array,
@@ -279,22 +169,18 @@ class JapaneseTextClassifier:
             stratify=labels_array,
         )
 
-        # Create and train pipeline
         self._pipeline = self._create_pipeline()
         self._pipeline.fit(X_train, y_train)
 
-        # Evaluate
         y_pred = self._pipeline.predict(X_test)
         accuracy = accuracy_score(y_test, y_pred)
 
-        # Get classification report as dict
         report = classification_report(
             y_test, y_pred,
             target_names=self.class_names,
             output_dict=True,
         )
 
-        # Create explainer using the same tokenizer as TF-IDF to avoid mismatch
         self._explainer = TextExplainer(
             class_names=self.class_names,
             split_expression=self._tokenizer,
@@ -321,52 +207,21 @@ class JapaneseTextClassifier:
         use_ai: Optional[bool] = None,
         fallback_to_template: bool = True,
     ) -> PredictionResult:
-        """
-        Predict the class of a single text with optional explanation.
-
-        Args:
-            text: The text to classify.
-            explain: Whether to generate LIME explanation.
-            num_features: Number of top features to include in explanation.
-            num_samples: Number of samples for LIME perturbation.
-            use_ai: Whether to use Gemini AI for Japanese summary.
-                   None = auto-detect (use AI if GEMINI_API_KEY is set).
-                   True = always use AI (raises error if unavailable).
-                   False = always use template-based summary.
-            fallback_to_template: If True, fall back to template summary
-                                 when AI fails. If False, raise exception.
-
-        Returns:
-            PredictionResult: Object containing prediction and explanation.
-
-        Raises:
-            RuntimeError: If model has not been trained.
-
-        Example:
-            >>> result = clf.predict("ニュースのテキスト", explain=True)
-            >>> print(result.predicted_class)
-            >>> print(result.summary_jp)
-            >>>
-            >>> # Force AI interpretation
-            >>> result = clf.predict("テキスト", use_ai=True)
-        """
+        """Classify a single text with optional LIME explanation and AI interpretation."""
         if not self.is_trained or self._pipeline is None:
             raise RuntimeError(
                 "Model has not been trained. Call train() first or load a saved model."
             )
 
-        # Get prediction and probabilities
         proba = self._pipeline.predict_proba([text])[0]
         predicted_label = int(np.argmax(proba))
         predicted_class = self.class_names[predicted_label]
 
-        # Build probabilities dict
         probabilities = {
             name: float(proba[i])
             for i, name in enumerate(self.class_names)
         }
 
-        # Generate explanation if requested
         explanation = None
         if explain and self._explainer is not None:
             explanation = self._generate_explanation(
@@ -393,32 +248,12 @@ class JapaneseTextClassifier:
         use_ai: Optional[bool] = None,
         fallback_to_template: bool = True,
     ) -> List[PredictionResult]:
-        """
-        Predict classes for multiple texts.
-
-        Args:
-            texts: List of texts to classify.
-            explain: Whether to generate LIME explanations (slower).
-            num_features: Number of top features for explanations.
-            num_samples: Number of samples for LIME perturbation.
-            use_ai: Whether to use Gemini AI for Japanese summaries.
-                   None = auto-detect, True = always use AI, False = use template.
-            fallback_to_template: If True, fall back to template on AI failure.
-
-        Returns:
-            List of PredictionResult objects.
-
-        Example:
-            >>> results = clf.predict_batch(["テキスト1", "テキスト2"])
-            >>> for result in results:
-            ...     print(f"{result.predicted_class}: {result.confidence:.1%}")
-        """
+        """Classify multiple texts, optionally generating explanations for each."""
         if not self.is_trained or self._pipeline is None:
             raise RuntimeError(
                 "Model has not been trained. Call train() first or load a saved model."
             )
 
-        # Get batch predictions
         probas = self._pipeline.predict_proba(texts)
 
         results = []
@@ -458,22 +293,9 @@ class JapaneseTextClassifier:
         num_features: int,
         num_samples: int,
     ) -> ExplanationResult:
-        """
-        Generate LIME explanation for a prediction.
-
-        Args:
-            text: The input text.
-            proba: Prediction probabilities.
-            num_features: Number of features to explain.
-            num_samples: Number of LIME samples.
-
-        Returns:
-            ExplanationResult with word weights and summaries.
-        """
-        # Determine which class to explain (the predicted one)
+        """Generate a LIME explanation for a single prediction."""
         predicted_label = int(np.argmax(proba))
 
-        # Generate LIME explanation
         exp = self._explainer.explain_instance(
             text,
             self._pipeline.predict_proba,
@@ -482,17 +304,14 @@ class JapaneseTextClassifier:
             labels=tuple(range(len(self.class_names))),
         )
 
-        # Get word weights for the predicted class
         word_weights = exp.as_list(label=predicted_label)
 
-        # Filter stopwords and punctuation from word_weights
         if self.stopwords:
             word_weights = [
                 (word, weight) for word, weight in word_weights
                 if word not in self.stopwords and not PUNCT_PATTERN.match(word)
             ]
 
-        # Generate summaries (filter stopwords from output)
         sentences_jp = summarize_lime_explanation_jp(
             exp, class_idx=predicted_label, stopwords=self.stopwords
         )
@@ -500,7 +319,6 @@ class JapaneseTextClassifier:
             exp, class_idx=predicted_label, stopwords=self.stopwords
         )
 
-        # Build probabilities dict
         probabilities = {
             name: float(proba[i])
             for i, name in enumerate(self.class_names)
@@ -518,39 +336,17 @@ class JapaneseTextClassifier:
         )
 
     def save(self, path: Union[str, Path]) -> None:
-        """
-        Save the trained model to a file.
-
-        The model is saved using joblib, which efficiently handles
-        large numpy arrays and sklearn objects.
-
-        Note:
-            The tokenizer function cannot be pickled directly, so the
-            TF-IDF vocabulary and classifier are saved separately and
-            reconstructed on load.
-
-        Args:
-            path: File path to save the model (e.g., 'model.pkl').
-
-        Raises:
-            RuntimeError: If model has not been trained.
-
-        Example:
-            >>> clf.save('my_model.pkl')
-        """
+        """Save the trained model to a file using joblib."""
         if not self.is_trained or self._pipeline is None:
             raise RuntimeError("Model has not been trained. Nothing to save.")
 
-        # Extract fitted components that can be pickled
         tfidf = self._pipeline.named_steps['tfidf']
         classifier = self._pipeline.named_steps['clf']
 
         save_data = {
-            # Fitted model components
             'tfidf_vocabulary': tfidf.vocabulary_,
             'tfidf_idf': getattr(tfidf, 'idf_', None),
             'classifier': classifier,
-            # Configuration for reconstruction
             'class_names': self.class_names,
             'classifier_type': self.classifier_type,
             'max_features': self.max_features,
@@ -564,22 +360,9 @@ class JapaneseTextClassifier:
 
     @classmethod
     def load(cls, path: Union[str, Path]) -> 'JapaneseTextClassifier':
-        """
-        Load a trained model from a file.
-
-        Args:
-            path: File path to load the model from.
-
-        Returns:
-            JapaneseTextClassifier: Loaded classifier ready for predictions.
-
-        Example:
-            >>> clf = JapaneseTextClassifier.load('my_model.pkl')
-            >>> result = clf.predict("テスト文章")
-        """
+        """Load a trained model from a file and reconstruct the pipeline."""
         save_data = joblib.load(path)
 
-        # Create new instance with saved parameters
         instance = cls(
             class_names=save_data['class_names'],
             classifier_type=save_data['classifier_type'],
@@ -589,7 +372,6 @@ class JapaneseTextClassifier:
             **save_data['classifier_kwargs'],
         )
 
-        # Reconstruct the vectorizer (CountVectorizer for naive_bayes, TfidfVectorizer otherwise)
         if instance.classifier_type == 'naive_bayes':
             vectorizer = CountVectorizer(
                 tokenizer=instance._tokenizer,
@@ -604,11 +386,9 @@ class JapaneseTextClassifier:
                 max_features=instance.max_features,
                 vocabulary=save_data['tfidf_vocabulary'],
             )
-            # Set the fitted IDF values
             vectorizer.idf_ = save_data['tfidf_idf']
-            vectorizer._tfidf._idf_diag = None  # Will be rebuilt on first transform
+            vectorizer._tfidf._idf_diag = None
 
-        # Reconstruct the pipeline
         instance._pipeline = Pipeline([
             ('tfidf', vectorizer),
             ('clf', save_data['classifier']),
@@ -616,7 +396,6 @@ class JapaneseTextClassifier:
 
         instance.is_trained = True
 
-        # Recreate explainer using the same tokenizer as TF-IDF to avoid mismatch
         instance._explainer = TextExplainer(
             class_names=instance.class_names,
             split_expression=instance._tokenizer,

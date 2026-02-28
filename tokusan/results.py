@@ -1,25 +1,4 @@
-"""
-Result classes for Japanese text classification.
-
-This module provides structured result classes for training and prediction
-operations, designed for easy integration with FastAPI and htmx.
-
-When GEMINI_API_KEY environment variable is set, the summary_jp property
-will use AI-powered interpretation via Google Gemini instead of template-based
-summaries.
-
-Classes:
-    TrainingResult: Contains training metrics and summary.
-    ExplanationResult: Contains LIME explanation with Japanese/English summaries.
-    PredictionResult: Contains prediction with probabilities and optional explanation.
-
-Example:
-    >>> from tokusan import JapaneseTextClassifier
-    >>> clf = JapaneseTextClassifier(class_names=['Fake', 'Real'])
-    >>> result = clf.predict("テスト文章", explain=True)
-    >>> print(result.summary_jp)  # AI-powered if GEMINI_API_KEY is set
-    >>> print(result.to_dict())
-"""
+"""Result classes for training, explanation, and prediction output."""
 
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
@@ -32,26 +11,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class TrainingResult:
-    """
-    Result from model training.
-
-    Contains metrics and statistics from the training process,
-    with methods for human-readable summaries and serialization.
-
-    Attributes:
-        accuracy: Overall accuracy on the test set.
-        classification_report: Dict with precision, recall, f1-score per class.
-        train_size: Number of samples in training set.
-        test_size: Number of samples in test set.
-        class_names: List of class names.
-
-    Example:
-        >>> result = classifier.train(texts, labels)
-        >>> print(result.accuracy)
-        0.85
-        >>> print(result.summary())
-        Training completed successfully...
-    """
+    """Training metrics including accuracy and per-class scores."""
 
     accuracy: float
     classification_report: Dict
@@ -60,12 +20,7 @@ class TrainingResult:
     class_names: List[str]
 
     def summary(self) -> str:
-        """
-        Generate a human-readable summary of training results.
-
-        Returns:
-            str: Formatted summary with accuracy and per-class metrics.
-        """
+        """Generate a human-readable English summary of training results."""
         lines = [
             f"Training completed successfully.",
             f"",
@@ -93,12 +48,7 @@ class TrainingResult:
         return "\n".join(lines)
 
     def summary_jp(self) -> str:
-        """
-        Generate a Japanese summary of training results.
-
-        Returns:
-            str: Formatted summary in Japanese.
-        """
+        """Generate a Japanese summary of training results."""
         lines = [
             f"学習が完了しました。",
             f"",
@@ -126,12 +76,7 @@ class TrainingResult:
         return "\n".join(lines)
 
     def to_dict(self) -> Dict:
-        """
-        Convert to a JSON-serializable dictionary.
-
-        Returns:
-            Dict: All training result data.
-        """
+        """Convert to a JSON-serializable dictionary."""
         return {
             "accuracy": self.accuracy,
             "classification_report": self.classification_report,
@@ -141,12 +86,7 @@ class TrainingResult:
         }
 
     def to_html(self) -> str:
-        """
-        Generate an HTML fragment for htmx partial updates.
-
-        Returns:
-            str: HTML representation of training results.
-        """
+        """Generate an HTML fragment for htmx partial updates."""
         rows = []
         for class_name in self.class_names:
             if class_name in self.classification_report:
@@ -185,27 +125,7 @@ class TrainingResult:
 
 @dataclass
 class ExplanationResult:
-    """
-    Structured LIME explanation with summaries.
-
-    Contains word importance weights and pre-generated summaries
-    in both Japanese and English.
-
-    Attributes:
-        word_weights: List of (word, weight) tuples sorted by |weight|.
-        class_name: Name of the explained class.
-        class_names: List of all class names.
-        probability: Probability of the explained class.
-        probabilities: Dict mapping class names to probabilities.
-        sentences_jp: Japanese summary sentences.
-        sentences_en: English summary sentences.
-        original_text: Original text that was classified (for AI interpretation).
-
-    Example:
-        >>> exp = result.explanation
-        >>> print(exp.sentences_jp[0])
-        このインスタンスは0.881対0.119でFakeと分類されました...
-    """
+    """LIME explanation with word weights and bilingual summaries."""
 
     word_weights: List[Tuple[str, float]]
     class_name: str
@@ -218,67 +138,26 @@ class ExplanationResult:
 
     @property
     def top_positive_words(self) -> List[Tuple[str, float]]:
-        """
-        Get words that increase the probability of this class.
-
-        Returns:
-            List of (word, weight) tuples with positive weights.
-        """
+        """Words that increase the probability of this class."""
         return [(w, wt) for w, wt in self.word_weights if wt > 0]
 
     @property
     def top_negative_words(self) -> List[Tuple[str, float]]:
-        """
-        Get words that decrease the probability of this class.
-
-        Returns:
-            List of (word, weight) tuples with negative weights.
-        """
+        """Words that decrease the probability of this class."""
         return [(w, wt) for w, wt in self.word_weights if wt < 0]
 
     @property
     def summary_jp(self) -> str:
-        """
-        Get the Japanese summary as a single string.
-
-        Returns:
-            str: Japanese explanation sentences joined by newlines.
-        """
+        """Japanese explanation sentences joined by newlines."""
         return "\n".join(self.sentences_jp)
 
     @property
     def summary_en(self) -> str:
-        """
-        Get the English summary as a single string.
-
-        Returns:
-            str: English explanation sentences joined by newlines.
-        """
+        """English explanation sentences joined by newlines."""
         return "\n".join(self.sentences_en)
 
     def get_ai_interpretation(self, fallback_to_template: bool = False) -> str:
-        """
-        Get AI-powered interpretation using Gemini.
-
-        This method generates a deep, human-readable explanation of why
-        the text was classified the way it was, using Google Gemini.
-
-        Args:
-            fallback_to_template: If True, return template summary when
-                                 AI is unavailable or fails. If False,
-                                 raise an exception on failure.
-
-        Returns:
-            str: AI-generated interpretation in Japanese.
-
-        Raises:
-            AIInterpretationError: If AI is not available and
-                                  fallback_to_template is False.
-
-        Example:
-            >>> interpretation = exp.get_ai_interpretation()
-            >>> print(interpretation)
-        """
+        """Get AI-powered interpretation using Gemini, with optional template fallback."""
         from .ai_interpreter import GeminiInterpreter, is_ai_available
         from .exceptions import AIInterpretationError
 
@@ -287,32 +166,20 @@ class ExplanationResult:
                 return self.summary_jp
             raise AIInterpretationError(
                 "AI interpretation is not available. "
-                "Set GEMINI_API_KEY and install google-generativeai."
+                "Set GEMINI_API_KEY and install google-genai."
             )
 
-        try:
-            interpreter = GeminiInterpreter()
-            return interpreter.interpret(
-                text=self.original_text,
-                predicted_class=self.class_name,
-                probabilities=self.probabilities,
-                word_weights=self.word_weights,
-                class_names=self.class_names,
-            )
-        except Exception as e:
-            if fallback_to_template:
-                return self.summary_jp
-            raise AIInterpretationError(
-                f"AI interpretation failed: {e}"
-            ) from e
+        interpreter = GeminiInterpreter()
+        return interpreter.interpret(
+            text=self.original_text,
+            predicted_class=self.class_name,
+            probabilities=self.probabilities,
+            word_weights=self.word_weights,
+            class_names=self.class_names,
+        )
 
     def to_dict(self) -> Dict:
-        """
-        Convert to a JSON-serializable dictionary.
-
-        Returns:
-            Dict: All explanation data.
-        """
+        """Convert to a JSON-serializable dictionary."""
         result = {
             "word_weights": [
                 {"word": w, "weight": wt} for w, wt in self.word_weights
@@ -335,21 +202,12 @@ class ExplanationResult:
         return result
 
     def to_html(self, lang: str = "jp") -> str:
-        """
-        Generate an HTML fragment for htmx partial updates.
-
-        Args:
-            lang: Language for summary ("jp" or "en").
-
-        Returns:
-            str: HTML representation of explanation.
-        """
+        """Generate an HTML fragment for htmx partial updates."""
         summary = self.summary_jp if lang == "jp" else self.summary_en
 
-        # Build word weight bars
         word_bars = []
         max_weight = max(abs(wt) for _, wt in self.word_weights) if self.word_weights else 1
-        for word, weight in self.word_weights[:10]:  # Top 10
+        for word, weight in self.word_weights[:10]:
             normalized = abs(weight) / max_weight * 100
             color = "green" if weight > 0 else "red"
             word_bars.append(f"""
@@ -375,29 +233,7 @@ class ExplanationResult:
 
 @dataclass
 class PredictionResult:
-    """
-    Result from a single prediction.
-
-    Contains the prediction, probabilities, and optional LIME explanation
-    with methods for summaries and serialization.
-
-    Attributes:
-        text: The input text that was classified.
-        predicted_class: Name of the predicted class.
-        predicted_label: Integer label of the predicted class.
-        probabilities: Dict mapping class names to probabilities.
-        class_names: List of all class names.
-        explanation: Optional ExplanationResult with word importance.
-        use_ai: Whether to use AI for Japanese summary (auto-detect by default).
-        fallback_to_template: Whether to fall back to template on AI error.
-
-    Example:
-        >>> result = classifier.predict("ニュースのテキスト", explain=True)
-        >>> print(result.predicted_class)
-        'Fake'
-        >>> print(result.summary_jp)
-        このインスタンスは...
-    """
+    """Prediction output with probabilities and optional LIME explanation."""
 
     text: str
     predicted_class: str
@@ -405,52 +241,24 @@ class PredictionResult:
     probabilities: Dict[str, float]
     class_names: List[str]
     explanation: Optional[ExplanationResult] = None
-    use_ai: Optional[bool] = None  # None = auto-detect based on GEMINI_API_KEY
+    use_ai: Optional[bool] = None
     fallback_to_template: bool = True
 
     @property
     def confidence(self) -> float:
-        """
-        Get the confidence (probability) of the predicted class.
-
-        Returns:
-            float: Probability of the predicted class.
-        """
+        """Probability of the predicted class."""
         return self.probabilities.get(self.predicted_class, 0.0)
 
     @property
     def summary_jp(self) -> str:
-        """
-        Get a Japanese summary of the prediction.
-
-        When use_ai is True (or None with GEMINI_API_KEY set), this property
-        returns an AI-powered interpretation that explains WHY the text
-        was classified the way it was. Otherwise, returns a template-based
-        summary.
-
-        The use_ai attribute controls behavior:
-        - None (default): Auto-detect based on GEMINI_API_KEY environment variable
-        - True: Always use AI (raises error if unavailable)
-        - False: Always use template
-
-        Returns:
-            str: Japanese text summarizing prediction and explanation.
-
-        Raises:
-            AIInterpretationError: If use_ai=True but AI is unavailable,
-                                  or if API call fails and fallback_to_template=False.
-        """
-        # Determine whether to use AI
+        """Japanese summary, using AI interpretation when available."""
         should_use_ai = self.use_ai
         if should_use_ai is None:
-            # Auto-detect: use AI if API key is set
             should_use_ai = bool(os.environ.get('GEMINI_API_KEY'))
 
-        # Use AI if enabled and explanation is available
         if should_use_ai and self.explanation:
             return self._generate_ai_summary_jp()
 
-        # Fallback to template-based summary
         return self._template_summary_jp()
 
     def _template_summary_jp(self) -> str:
@@ -459,11 +267,9 @@ class PredictionResult:
             f"予測結果: {self.predicted_class} ({self.confidence:.1%}の確率)",
         ]
 
-        # Add probability breakdown
         prob_parts = [f"{name}: {prob:.1%}" for name, prob in self.probabilities.items()]
         lines.append(f"クラス確率: {', '.join(prob_parts)}")
 
-        # Add explanation if available
         if self.explanation:
             lines.append("")
             lines.append("説明:")
@@ -472,60 +278,37 @@ class PredictionResult:
         return "\n".join(lines)
 
     def _generate_ai_summary_jp(self) -> str:
-        """
-        Generate AI-powered Japanese summary using Gemini.
-
-        Returns:
-            str: AI-generated interpretation in Japanese.
-
-        Raises:
-            AIInterpretationError: If API call fails and fallback_to_template=False.
-        """
+        """Generate AI-powered Japanese summary using Gemini, with optional template fallback."""
         from .ai_interpreter import GeminiInterpreter, is_ai_available
         from .exceptions import AIInterpretationError
 
-        # Check if AI is available
         if not is_ai_available():
             if self.fallback_to_template:
                 return self._template_summary_jp()
             raise AIInterpretationError(
                 "AI interpretation is not available. "
-                "Set GEMINI_API_KEY and install google-generativeai."
+                "Set GEMINI_API_KEY and install google-genai."
             )
 
-        try:
-            interpreter = GeminiInterpreter()
-            return interpreter.interpret(
-                text=self.text,
-                predicted_class=self.predicted_class,
-                probabilities=self.probabilities,
-                word_weights=self.explanation.word_weights if self.explanation else [],
-                class_names=self.class_names,
-            )
-        except Exception as e:
-            if self.fallback_to_template:
-                return self._template_summary_jp()
-            raise AIInterpretationError(
-                f"AI interpretation failed: {e}"
-            ) from e
+        interpreter = GeminiInterpreter()
+        return interpreter.interpret(
+            text=self.text,
+            predicted_class=self.predicted_class,
+            probabilities=self.probabilities,
+            word_weights=self.explanation.word_weights if self.explanation else [],
+            class_names=self.class_names,
+        )
 
     @property
     def summary_en(self) -> str:
-        """
-        Get an English summary of the prediction.
-
-        Returns:
-            str: English text summarizing prediction and explanation.
-        """
+        """English summary of the prediction and explanation."""
         lines = [
             f"Prediction: {self.predicted_class} ({self.confidence:.1%} confidence)",
         ]
 
-        # Add probability breakdown
         prob_parts = [f"{name}: {prob:.1%}" for name, prob in self.probabilities.items()]
         lines.append(f"Class probabilities: {', '.join(prob_parts)}")
 
-        # Add explanation if available
         if self.explanation:
             lines.append("")
             lines.append("Explanation:")
@@ -534,12 +317,7 @@ class PredictionResult:
         return "\n".join(lines)
 
     def to_dict(self) -> Dict:
-        """
-        Convert to a JSON-serializable dictionary.
-
-        Returns:
-            Dict: All prediction data including explanation if present.
-        """
+        """Convert to a JSON-serializable dictionary."""
         result = {
             "text": self.text,
             "predicted_class": self.predicted_class,
@@ -557,16 +335,7 @@ class PredictionResult:
         return result
 
     def to_html(self, lang: str = "jp") -> str:
-        """
-        Generate an HTML fragment for htmx partial updates.
-
-        Args:
-            lang: Language for display ("jp" or "en").
-
-        Returns:
-            str: HTML representation of prediction result.
-        """
-        # Build probability bars
+        """Generate an HTML fragment for htmx partial updates."""
         prob_bars = []
         for class_name, prob in self.probabilities.items():
             is_predicted = class_name == self.predicted_class
