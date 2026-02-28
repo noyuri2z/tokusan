@@ -1,5 +1,16 @@
 # Worklog
 
+## 2026-02-28: Add LinearSVC and Naive Bayes classifier options
+
+**Files changed:** `tokusan/classifier.py`, `web/templates/partials/config_form.html`
+
+**Changes:**
+- `tokusan/classifier.py`: Added imports for `CalibratedClassifierCV`, `LinearSVC`, `MultinomialNB`. Updated `classifier_type` Literal to include `'linear_svc'` and `'naive_bayes'`. Added corresponding `elif` branches in `_create_pipeline()`. `LinearSVC` is wrapped in `CalibratedClassifierCV` (Platt scaling) to provide `predict_proba` required by LIME.
+- `web/templates/partials/config_form.html`: Added two new `<option>` entries to the classifier select. Added a `<p id="classifier-desc">` that dynamically shows a description of each model when selected (via `onchange` + inline JS dict).
+
+**Verification:**
+- `pytest tests/test_tokusan.py -v` → 71 passed, 1 pre-existing failure (unrelated)
+
 ## 2026-02-28: Add ramen review sample dataset
 
 **Files changed:**

@@ -29,12 +29,15 @@ from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union
 
 import joblib
 import numpy as np
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
+from sklearn.svm import LinearSVC
 
 from .explainer import (
     TextExplainer,
@@ -125,7 +128,9 @@ class JapaneseTextClassifier:
     def __init__(
         self,
         class_names: List[str],
-        classifier_type: Literal['logistic_regression', 'random_forest'] = 'logistic_regression',
+        classifier_type: Literal[
+            'logistic_regression', 'random_forest', 'linear_svc', 'naive_bayes'
+        ] = 'logistic_regression',
         max_features: int = 20000,
         stopwords: Optional[set] = None,
         tokenizer: Optional[Callable[[str], List[str]]] = None,
@@ -204,10 +209,20 @@ class JapaneseTextClassifier:
                 **{k: v for k, v in self.classifier_kwargs.items()
                    if k not in ['n_estimators', 'max_depth']},
             )
+        elif self.classifier_type == 'linear_svc':
+            clf = CalibratedClassifierCV(
+                LinearSVC(
+                    random_state=self.random_state,
+                    max_iter=2000,
+                    **self.classifier_kwargs,
+                )
+            )
+        elif self.classifier_type == 'naive_bayes':
+            clf = MultinomialNB(**self.classifier_kwargs)
         else:
             raise ValueError(
                 f"Unknown classifier_type: {self.classifier_type}. "
-                "Options: 'logistic_regression', 'random_forest'"
+                "Options: 'logistic_regression', 'random_forest', 'linear_svc', 'naive_bayes'"
             )
 
         return Pipeline([

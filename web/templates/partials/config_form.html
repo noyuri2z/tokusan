@@ -26,10 +26,15 @@
             分類器の種類
         </label>
         <select name="classifier_type"
+                id="classifier-type-select"
+                onchange="updateClassifierDesc(this.value)"
                 class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500">
-            <option value="logistic_regression" selected>ロジスティック回帰（高速）</option>
-            <option value="random_forest">ランダムフォレスト（低速・非線形）</option>
+            <option value="logistic_regression" selected>ロジスティック回帰</option>
+            <option value="random_forest">ランダムフォレスト</option>
+            <option value="linear_svc">線形SVM</option>
+            <option value="naive_bayes">ナイーブベイズ</option>
         </select>
+        <p id="classifier-desc" class="text-sm text-gray-500 mt-1"></p>
     </div>
 
     <button type="submit"
@@ -44,4 +49,15 @@
 
 <script>
     document.getElementById('step2-badge').className = 'bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center mr-3 text-sm';
+
+    const CLASSIFIER_DESCS = {
+        logistic_regression: "線形モデル。高速で解釈しやすく、ほとんどのテキスト分類タスクに適しています。クラス間の境界が線形な場合に最も効果的です。",
+        random_forest: "決定木のアンサンブル。非線形な関係を捉えられますが、学習に時間がかかります。高次元・疎なTF-IDF特徴量とは相性がやや悪い場合があります。",
+        linear_svc: "線形サポートベクターマシン。高次元・疎なTF-IDF特徴量に非常に強く、テキスト分類で最も性能が出やすいモデルの一つです。確率推定にPlattスケーリングを使用します。",
+        naive_bayes: "確率的な生成モデル。非常に高速で少量データでも機能します。単語の出現が独立という仮定があるため、複雑な文脈の分類には不向きな場合があります。",
+    };
+    function updateClassifierDesc(val) {
+        document.getElementById('classifier-desc').textContent = CLASSIFIER_DESCS[val] || '';
+    }
+    updateClassifierDesc('logistic_regression');
 </script>
