@@ -3,7 +3,6 @@
 import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
-from uuid import uuid4
 
 from tokusan import JapaneseTextClassifier, TrainingResult
 
@@ -30,19 +29,18 @@ class AppState:
         self.max_sessions = max_sessions
         self.session_ttl = session_ttl
 
-    def get_or_create_session(self, session_id: Optional[str] = None) -> SessionState:
-        """Get existing session or create a new one."""
+    def get_or_create_session(self, session_key: str) -> SessionState:
+        """Get existing session or create a new one, keyed by user ID."""
         self._cleanup_expired()
 
-        if session_id and session_id in self.sessions:
+        if session_key in self.sessions:
             # Refresh session timestamp
-            self.sessions[session_id].created_at = time.time()
-            return self.sessions[session_id]
+            self.sessions[session_key].created_at = time.time()
+            return self.sessions[session_key]
 
         # Create new session
-        new_id = str(uuid4())
-        session = SessionState(session_id=new_id)
-        self.sessions[new_id] = session
+        session = SessionState(session_id=session_key)
+        self.sessions[session_key] = session
         return session
 
     def _cleanup_expired(self):
