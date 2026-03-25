@@ -36,6 +36,32 @@ This is a Python library (LIME.JP / Tokusan) that extends LIME for Japanese NLP 
 
 # Worklog
 
+## 2026-02-28: Add spam email classification sample dataset
+
+**Files changed:**
+- `web/samples/spam_sample.csv` (new)
+- `web/app.py`
+- `web/templates/index.html`
+
+**Context:** Added a synthetic Japanese spam/ham email dataset as a fourth bundled sample to demonstrate binary text classification. This dataset has clear vocabulary separation between classes (spam uses words like 当選, 無料, 至急, 副業, suspicious URLs; ham uses business/personal language), making it a strong demo where the model achieves high accuracy and LIME highlights distinguishing keywords clearly.
+
+**Changes:**
+- `spam_sample.csv`: 500 rows (250 spam, 250 ham), columns `text` and `label`. Generated from 30 spam templates and 30 ham templates with randomized variable substitution (`random_state=42`). Spam includes phishing, lottery scams, dating spam, fake virus warnings, get-rich-quick schemes. Ham includes business emails, personal messages, meeting invitations, order confirmations.
+- `web/app.py` `sample_config`: Added `"spam"` entry with `suggested_classes: ["通常メール", "迷惑メール"]`.
+- `web/templates/index.html`: Added a red "迷惑メール分類（500件）" button in the sample panel.
+
+## 2026-02-28: Fix metric tooltip click handler and positioning
+
+**Files changed:** `web/templates/base.html`, `web/templates/partials/training_result.html`
+
+**Bug:** The `?` tooltip buttons were visible but clicking them did nothing. Two causes:
+1. The `#metric-tooltip` container div was inside `training_result.html` (htmx-swapped content), making it unreliable for `getElementById` lookup and potentially clipped by ancestor containers.
+2. `showTooltip()` added `window.scrollY`/`window.scrollX` to the positioning, but the tooltip uses `position: fixed` (viewport-relative), pushing it off-screen when the page was scrolled.
+
+**Fix:**
+- Moved the `#metric-tooltip` div from `training_result.html` to `base.html` (directly in `<body>`, outside all content containers) so it always exists in the DOM.
+- Removed `window.scrollY` and `window.scrollX` from the `showTooltip()` positioning calculation — `getBoundingClientRect()` already returns viewport-relative coordinates, which is what `position: fixed` needs.
+
 ## 2026-02-28: Fix metric tooltips and improve classifier performance
 
 **Files changed:** `tokusan/classifier.py`, `web/templates/partials/training_result.html`

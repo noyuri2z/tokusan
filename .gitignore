@@ -209,3 +209,7 @@ __marimo__/
 # Local project context & worklog
 worklog.md
 setup-instruction.md
+
+# Tokusan user data and database
+web/tokusan.db
+web/user_data/
