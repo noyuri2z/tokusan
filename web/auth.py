@@ -59,14 +59,14 @@ def require_auth(request: Request) -> dict:
     if user is not None:
         return user
 
-    # Not authenticated — redirect to login
+    # Not authenticated — redirect to welcome page
     if request.headers.get("HX-Request"):
         # HTMX requests need HX-Redirect header
         response = HTMLResponse(status_code=200)
-        response.headers["HX-Redirect"] = "/login"
+        response.headers["HX-Redirect"] = "/"
         raise _AuthRedirectException(response)
 
-    raise _AuthRedirectException(RedirectResponse("/login", status_code=302))
+    raise _AuthRedirectException(RedirectResponse("/", status_code=302))
 
 
 class _AuthRedirectException(Exception):

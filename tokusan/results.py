@@ -45,6 +45,10 @@ class TrainingResult:
                     f"recall={recall:.2f}, f1={f1:.2f}"
                 )
 
+        if self.accuracy < 0.5:
+            lines.append("")
+            lines.append("正解率が50%以下です。モデルを変えるかデータセットに問題がないかを確認してください")
+
         return "\n".join(lines)
 
     def summary_jp(self) -> str:
@@ -72,6 +76,10 @@ class TrainingResult:
                     f"  - {class_name}: 適合率={precision:.2f}, "
                     f"再現率={recall:.2f}, F1={f1:.2f}"
                 )
+
+        if self.accuracy < 0.5:
+            lines.append("")
+            lines.append("正解率が50%以下です。モデルを変えるかデータセットに問題がないかを確認してください")
 
         return "\n".join(lines)
 

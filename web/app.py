@@ -23,11 +23,15 @@ from .auth import (
 )
 from .db import (
     create_user,
+    delete_user_model,
     get_latest_user_model,
     get_user_by_username,
+    get_user_model,
     init_db,
+    list_user_models,
     save_user_model,
 )
+from .sample_config import MODEL_DESCRIPTIONS, SAMPLE_DATASETS
 from .state import app_state
 
 app = FastAPI(
@@ -132,15 +136,41 @@ async def _save_model_for_user(user: dict, session):
     )
 
 
+# Classifier type Japanese names for dashboard display
+_CLASSIFIER_NAMES = {k: v["name"] for k, v in MODEL_DESCRIPTIONS.items()}
+
+
 # ---------------------------------------------------------------------------
 # Auth routes
 # ---------------------------------------------------------------------------
-@app.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request):
+@app.get("/", response_class=HTMLResponse)
+async def welcome_or_redirect(request: Request):
+    """Welcome page for unauthenticated users, redirect for authenticated."""
     user = get_current_user(request)
     if user is not None:
-        return RedirectResponse("/", status_code=302)
-    return templates.TemplateResponse(request, "login.html", {"error": None})
+        return RedirectResponse("/dashboard", status_code=302)
+    return templates.TemplateResponse(
+        request,
+        "welcome.html",
+        {
+            "active_tab": "login",
+            "login_error": None,
+            "register_error": None,
+            "username": "",
+        },
+    )
+
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_redirect(request: Request):
+    """Backward compat: redirect to welcome page."""
+    return RedirectResponse("/", status_code=302)
+
+
+@app.get("/register", response_class=HTMLResponse)
+async def register_redirect(request: Request):
+    """Backward compat: redirect to welcome page."""
+    return RedirectResponse("/", status_code=302)
 
 
 @app.post("/login", response_class=HTMLResponse)
@@ -149,23 +179,20 @@ async def login_submit(request: Request, username: str = Form(...), password: st
     if db_user is None or not verify_password(password, db_user["password_hash"]):
         return templates.TemplateResponse(
             request,
-            "login.html",
-            {"error": "ユーザー名またはパスワードが正しくありません。", "username": username},
+            "welcome.html",
+            {
+                "active_tab": "login",
+                "login_error": "ユーザー名またはパスワードが正しくありません。",
+                "register_error": None,
+                "username": username,
+            },
         )
 
     token = create_session_token(db_user["id"], db_user["username"])
-    response = RedirectResponse("/", status_code=302)
+    response = RedirectResponse("/dashboard", status_code=302)
     response.set_cookie(COOKIE_NAME, token, httponly=True, max_age=86400)
-    response.delete_cookie("session_id")  # Clean up old anonymous cookie
+    response.delete_cookie("session_id")
     return response
-
-
-@app.get("/register", response_class=HTMLResponse)
-async def register_page(request: Request):
-    user = get_current_user(request)
-    if user is not None:
-        return RedirectResponse("/", status_code=302)
-    return templates.TemplateResponse(request, "register.html", {"error": None})
 
 
 @app.post("/register", response_class=HTMLResponse)
@@ -176,34 +203,28 @@ async def register_submit(
     password_confirm: str = Form(...),
 ):
     # Validation
+    error = None
     if len(username.strip()) < 3:
-        return templates.TemplateResponse(
-            request,
-            "register.html",
-            {"error": "ユーザー名は3文字以上で入力してください。", "username": username},
-        )
+        error = "ユーザー名は3文字以上で入力してください。"
+    elif len(password) < 6:
+        error = "パスワードは6文字以上で入力してください。"
+    elif password != password_confirm:
+        error = "パスワードが一致しません。"
+    else:
+        existing = await get_user_by_username(username.strip())
+        if existing is not None:
+            error = "このユーザー名は既に使用されています。"
 
-    if len(password) < 6:
+    if error:
         return templates.TemplateResponse(
             request,
-            "register.html",
-            {"error": "パスワードは6文字以上で入力してください。", "username": username},
-        )
-
-    if password != password_confirm:
-        return templates.TemplateResponse(
-            request,
-            "register.html",
-            {"error": "パスワードが一致しません。", "username": username},
-        )
-
-    # Check if username already taken
-    existing = await get_user_by_username(username.strip())
-    if existing is not None:
-        return templates.TemplateResponse(
-            request,
-            "register.html",
-            {"error": "このユーザー名は既に使用されています。", "username": username},
+            "welcome.html",
+            {
+                "active_tab": "register",
+                "login_error": None,
+                "register_error": error,
+                "username": username,
+            },
         )
 
     # Create user
@@ -212,40 +233,210 @@ async def register_submit(
 
     # Auto-login
     token = create_session_token(user_id, username.strip())
-    response = RedirectResponse("/", status_code=302)
+    response = RedirectResponse("/dashboard", status_code=302)
     response.set_cookie(COOKIE_NAME, token, httponly=True, max_age=86400)
     return response
 
 
 @app.get("/logout")
 async def logout(request: Request):
-    response = RedirectResponse("/login", status_code=302)
+    response = RedirectResponse("/", status_code=302)
     response.delete_cookie(COOKIE_NAME)
     response.delete_cookie("session_id")
     return response
 
 
 # ---------------------------------------------------------------------------
-# Main page
+# Dashboard
 # ---------------------------------------------------------------------------
-@app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
-    """Main page with all forms."""
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard(request: Request):
+    user = require_auth(request)
+    models = await list_user_models(user["user_id"])
+    return templates.TemplateResponse(
+        request,
+        "dashboard.html",
+        {
+            "user": user,
+            "models": models,
+            "model_names": _CLASSIFIER_NAMES,
+        },
+    )
+
+
+@app.post("/dashboard/delete/{model_id}", response_class=HTMLResponse)
+async def dashboard_delete_model(request: Request, model_id: int):
+    user = require_auth(request)
+    await delete_user_model(user["user_id"], model_id)
+    return RedirectResponse("/dashboard", status_code=302)
+
+
+@app.get("/dashboard/load/{model_id}", response_class=HTMLResponse)
+async def dashboard_load_model(request: Request, model_id: int):
     user = require_auth(request)
     session = _get_session_for_user(user)
 
-    # Auto-load saved model if session is empty
-    await _try_load_saved_model(user, session)
+    model_record = await get_user_model(user["user_id"], model_id)
+    if model_record is None:
+        return RedirectResponse("/dashboard", status_code=302)
 
-    is_trained = session.classifier is not None and session.classifier.is_trained
+    model_path = Path(model_record["model_path"])
+    if not model_path.exists():
+        return RedirectResponse("/dashboard", status_code=302)
+
+    try:
+        session.classifier = JapaneseTextClassifier.load(model_path)
+        session.class_names = model_record["class_names"]
+        session.classifier_type = model_record["classifier_type"]
+
+        data_path = model_record.get("training_data_path")
+        if data_path and Path(data_path).exists():
+            session.training_data = pd.read_csv(data_path)
+
+        # Re-run training result from loaded model for display
+        if session.training_data is not None:
+            df = session.training_data
+            clf = JapaneseTextClassifier(
+                class_names=session.class_names,
+                classifier_type=session.classifier_type,
+            )
+            result = clf.train(df["text"].tolist(), df["label"].tolist())
+            session.classifier = clf
+            session.training_result = result
+    except Exception:
+        return RedirectResponse("/dashboard", status_code=302)
+
+    return RedirectResponse("/project/results", status_code=302)
+
+
+# ---------------------------------------------------------------------------
+# Project: Data page
+# ---------------------------------------------------------------------------
+@app.get("/project/data", response_class=HTMLResponse)
+async def project_data(request: Request):
+    user = require_auth(request)
+    session = _get_session_for_user(user)
+
+    # Reset session for new project
+    session.training_data = None
+    session.classifier = None
+    session.training_result = None
+    session.class_names = []
+    session.classifier_type = "logistic_regression"
+    session.current_sample = None
 
     return templates.TemplateResponse(
         request,
-        "index.html",
+        "project/data.html",
         {
-            "session": session,
-            "is_trained": is_trained,
             "user": user,
+            "samples": SAMPLE_DATASETS,
+            "current_step": 1,
+        },
+    )
+
+
+@app.get("/api/sample-info/{sample}", response_class=HTMLResponse)
+async def sample_info(request: Request, sample: str):
+    """Return sample dataset info partial."""
+    user = require_auth(request)
+    config = SAMPLE_DATASETS.get(sample)
+    if config is None:
+        return _error_response(request, f"不明なサンプル名: {sample}")
+    return templates.TemplateResponse(
+        request,
+        "partials/sample_info.html",
+        {"sample": config},
+    )
+
+
+@app.post("/project/data/confirm", response_class=HTMLResponse)
+async def project_data_confirm(request: Request):
+    """Validate data exists and proceed to model selection."""
+    user = require_auth(request)
+    session = _get_session_for_user(user)
+
+    if session.training_data is None:
+        return RedirectResponse("/project/data", status_code=302)
+
+    return RedirectResponse("/project/model", status_code=302)
+
+
+# ---------------------------------------------------------------------------
+# Project: Model page
+# ---------------------------------------------------------------------------
+@app.get("/project/model", response_class=HTMLResponse)
+async def project_model(request: Request):
+    user = require_auth(request)
+    session = _get_session_for_user(user)
+
+    if session.training_data is None:
+        return RedirectResponse("/project/data", status_code=302)
+
+    df = session.training_data
+    unique_labels = sorted(df["label"].unique())
+
+    # Determine suggested classes
+    if session.current_sample and session.current_sample in SAMPLE_DATASETS:
+        preset = SAMPLE_DATASETS[session.current_sample].get("suggested_classes")
+        suggested = preset if preset else [f"Class_{l}" for l in unique_labels]
+    else:
+        suggested = [f"Class_{l}" for l in unique_labels]
+
+    return templates.TemplateResponse(
+        request,
+        "project/model.html",
+        {
+            "user": user,
+            "model_descriptions": MODEL_DESCRIPTIONS,
+            "num_samples": len(df),
+            "num_classes": len(unique_labels),
+            "unique_labels": unique_labels,
+            "suggested_classes": suggested,
+            "current_step": 2,
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# Project: Results page
+# ---------------------------------------------------------------------------
+@app.get("/project/results", response_class=HTMLResponse)
+async def project_results(request: Request):
+    user = require_auth(request)
+    session = _get_session_for_user(user)
+
+    if session.training_result is None:
+        return RedirectResponse("/dashboard", status_code=302)
+
+    return templates.TemplateResponse(
+        request,
+        "project/results.html",
+        {
+            "user": user,
+            "result": session.training_result,
+            "current_step": 3,
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# Project: Play page
+# ---------------------------------------------------------------------------
+@app.get("/project/play", response_class=HTMLResponse)
+async def project_play(request: Request):
+    user = require_auth(request)
+    session = _get_session_for_user(user)
+
+    if session.classifier is None or not session.classifier.is_trained:
+        return RedirectResponse("/dashboard", status_code=302)
+
+    return templates.TemplateResponse(
+        request,
+        "project/play.html",
+        {
+            "user": user,
+            "current_step": 4,
         },
     )
 
@@ -271,11 +462,12 @@ async def upload_csv(request: Request, file: UploadFile = File(...)):
         )
 
     session.training_data = df
+    session.current_sample = None
     unique_labels = sorted(df["label"].unique())
 
     return templates.TemplateResponse(
         request,
-        "partials/config_form.html",
+        "partials/data_summary.html",
         {
             "num_samples": len(df),
             "unique_labels": unique_labels,
@@ -290,48 +482,30 @@ async def load_sample(request: Request, sample: str = Form("fakenews")):
     user = require_auth(request)
     session = _get_session_for_user(user)
 
-    sample_config = {
-        "fakenews": {"file": "fakenews_sample.csv", "suggested_classes": None},
-        "ramen": {"file": "ramen_review_sample.csv", "suggested_classes": None},
-        "wrime": {
-            "file": "wrime_sample.csv",
-            "suggested_classes": ["喜び", "悲しみ", "期待", "驚き", "怒り", "恐れ", "嫌悪", "信頼"],
-        },
-        "spam": {
-            "file": "spam_sample.csv",
-            "suggested_classes": ["通常メール", "迷惑メール"],
-        },
-    }
-    config = sample_config.get(sample)
+    config = SAMPLE_DATASETS.get(sample)
     if config is None:
-        return templates.TemplateResponse(
-            request,
-            "partials/error.html",
-            {"error": f"不明なサンプル名: {sample}", "hint": ""},
-            status_code=400,
-        )
+        return _error_response(request, f"不明なサンプル名: {sample}")
 
     sample_path = SAMPLES_DIR / config["file"]
     if not sample_path.exists():
-        return templates.TemplateResponse(
+        return _error_response(
             request,
-            "partials/error.html",
-            {
-                "error": "サンプルデータファイルが見つかりませんでした。",
-                "hint": "管理者に連絡してください。",
-            },
+            error="サンプルデータファイルが見つかりませんでした。",
+            hint="管理者に連絡してください。",
             status_code=500,
         )
 
     df = pd.read_csv(sample_path)
     session.training_data = df
+    session.current_sample = sample
 
     unique_labels = sorted(df["label"].unique())
     preset = config["suggested_classes"]
     suggested = preset if preset is not None else [f"Class_{l}" for l in unique_labels]
+
     return templates.TemplateResponse(
         request,
-        "partials/config_form.html",
+        "partials/data_summary.html",
         {
             "num_samples": len(df),
             "unique_labels": unique_labels,
@@ -354,7 +528,7 @@ async def train_model(
         return _error_response(
             request,
             error="学習データがアップロードされていません。まずCSVをアップロードしてください。",
-            hint="ステップ1からCSVをアップロードしてください。",
+            hint="データ選択ページからCSVをアップロードしてください。",
         )
 
     names = [n.strip() for n in re.split(r"[,、]", class_names) if n.strip()]
@@ -380,11 +554,10 @@ async def train_model(
     # Auto-save model for the user
     await _save_model_for_user(user, session)
 
-    return templates.TemplateResponse(
-        request,
-        "partials/training_result.html",
-        {"result": result},
-    )
+    # Return HX-Redirect to results page
+    response = HTMLResponse(content="", status_code=200)
+    response.headers["HX-Redirect"] = "/project/results"
+    return response
 
 
 @app.post("/api/predict", response_class=HTMLResponse)
@@ -400,7 +573,7 @@ async def predict_text(
         return _error_response(
             request,
             error="学習済みモデルがありません。データをアップロードして学習を行ってください。",
-            hint="ステップ1からやり直してください。",
+            hint="データ選択ページからやり直してください。",
         )
 
     ai_available = is_ai_available()
