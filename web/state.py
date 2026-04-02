@@ -19,6 +19,7 @@ class SessionState:
     class_names: list = field(default_factory=list)
     classifier_type: str = "logistic_regression"
     current_sample: Optional[str] = None
+    project_name: Optional[str] = None
 
 
 class AppState:

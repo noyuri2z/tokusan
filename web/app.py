@@ -117,13 +117,14 @@ async def _save_model_for_user(user: dict, session):
     user_dir = USER_DATA_DIR / str(user["user_id"])
     user_dir.mkdir(parents=True, exist_ok=True)
 
-    model_name = "latest"
-    model_path = user_dir / "model_latest.joblib"
+    model_name = session.project_name or "latest"
+    safe_name = re.sub(r'[^\w\-]', '_', model_name)
+    model_path = user_dir / f"model_{safe_name}.joblib"
     session.classifier.save(model_path)
 
     data_path = None
     if session.training_data is not None:
-        data_path = str(user_dir / "data_latest.csv")
+        data_path = str(user_dir / f"data_{safe_name}.csv")
         session.training_data.to_csv(data_path, index=False)
 
     await save_user_model(
@@ -324,6 +325,7 @@ async def project_data(request: Request):
     session.class_names = []
     session.classifier_type = "logistic_regression"
     session.current_sample = None
+    session.project_name = None
 
     return templates.TemplateResponse(
         request,
@@ -351,13 +353,24 @@ async def sample_info(request: Request, sample: str):
 
 
 @app.post("/project/data/confirm", response_class=HTMLResponse)
-async def project_data_confirm(request: Request):
+async def project_data_confirm(
+    request: Request,
+    project_name: str = Form(""),
+    class_names: str = Form(""),
+):
     """Validate data exists and proceed to model selection."""
     user = require_auth(request)
     session = _get_session_for_user(user)
 
     if session.training_data is None:
         return RedirectResponse("/project/data", status_code=302)
+
+    session.project_name = project_name.strip() or None
+
+    # Save class names from form
+    names = [n.strip() for n in re.split(r"[,、]", class_names) if n.strip()]
+    if names:
+        session.class_names = names
 
     return RedirectResponse("/project/model", status_code=302)
 
@@ -376,13 +389,6 @@ async def project_model(request: Request):
     df = session.training_data
     unique_labels = sorted(df["label"].unique())
 
-    # Determine suggested classes
-    if session.current_sample and session.current_sample in SAMPLE_DATASETS:
-        preset = SAMPLE_DATASETS[session.current_sample].get("suggested_classes")
-        suggested = preset if preset else [f"Class_{l}" for l in unique_labels]
-    else:
-        suggested = [f"Class_{l}" for l in unique_labels]
-
     return templates.TemplateResponse(
         request,
         "project/model.html",
@@ -391,8 +397,31 @@ async def project_model(request: Request):
             "model_descriptions": MODEL_DESCRIPTIONS,
             "num_samples": len(df),
             "num_classes": len(unique_labels),
-            "unique_labels": unique_labels,
-            "suggested_classes": suggested,
+            "current_step": 2,
+        },
+    )
+
+
+@app.get("/project/model/{model_key}", response_class=HTMLResponse)
+async def project_model_detail(request: Request, model_key: str):
+    """Show detailed model explanation page."""
+    user = require_auth(request)
+    session = _get_session_for_user(user)
+
+    if session.training_data is None:
+        return RedirectResponse("/project/data", status_code=302)
+
+    model = MODEL_DESCRIPTIONS.get(model_key)
+    if model is None:
+        return RedirectResponse("/project/model", status_code=302)
+
+    return templates.TemplateResponse(
+        request,
+        "project/model_detail.html",
+        {
+            "user": user,
+            "model_key": model_key,
+            "model": model,
             "current_step": 2,
         },
     )
@@ -517,7 +546,7 @@ async def load_sample(request: Request, sample: str = Form("fakenews")):
 @app.post("/api/train", response_class=HTMLResponse)
 async def train_model(
     request: Request,
-    class_names: str = Form(...),
+    class_names: str = Form(""),
     classifier_type: str = Form("logistic_regression"),
 ):
     """Train the classifier on uploaded data."""
@@ -532,6 +561,9 @@ async def train_model(
         )
 
     names = [n.strip() for n in re.split(r"[,、]", class_names) if n.strip()]
+    # Fallback to session class_names if not provided in form
+    if not names and session.class_names:
+        names = session.class_names
     if len(names) < 2:
         return _error_response(
             request,

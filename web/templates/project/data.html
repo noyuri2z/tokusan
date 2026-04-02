@@ -5,6 +5,15 @@
     <!-- Progress Indicator -->
     {% include "partials/progress.html" %}
 
+    <!-- Project Name -->
+    <section class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-semibold mb-2">プロジェクト名</h2>
+        <p class="text-sm text-gray-600 mb-4">プロジェクトの名前を入力してください。ダッシュボードでモデルを識別するために使用されます。</p>
+        <input type="text" id="project-name-input"
+               class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+               placeholder="例：ラーメンレビュー分類" maxlength="100">
+    </section>
+
     <section class="bg-white rounded-lg shadow p-6">
         <h2 class="text-xl font-semibold mb-2">学習データの選択</h2>
         <p class="text-sm text-gray-600 mb-6">テキスト分類に使うデータを選んでください。サンプルデータを使うか、独自のCSVファイルをアップロードできます。</p>
@@ -86,7 +95,9 @@
     <!-- Next Button -->
     <div class="flex justify-between items-center">
         <a href="/dashboard" class="text-gray-600 hover:text-gray-800 text-sm">ダッシュボードに戻る</a>
-        <form method="POST" action="/project/data/confirm">
+        <form method="POST" action="/project/data/confirm" onsubmit="document.getElementById('project-name-hidden').value = document.getElementById('project-name-input').value; var cn = document.getElementById('class-names-input'); if (cn) document.getElementById('class-names-hidden').value = cn.value;">
+            <input type="hidden" name="project_name" id="project-name-hidden" value="">
+            <input type="hidden" name="class_names" id="class-names-hidden" value="">
             <button type="submit"
                     id="next-btn"
                     class="bg-blue-600 text-white px-8 py-2 rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"

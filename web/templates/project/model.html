@@ -5,9 +5,9 @@
     <!-- Progress Indicator -->
     {% include "partials/progress.html" %}
 
-    <!-- Data Summary -->
+    <!-- Model Selection -->
     <section class="bg-white rounded-lg shadow p-6">
-        <h2 class="text-xl font-semibold mb-2">モデルの選択と学習</h2>
+        <h2 class="text-xl font-semibold mb-2">モデルの選択</h2>
         <p class="text-sm text-gray-600 mb-4">テキスト分類に使うモデルを選んでください。それぞれのモデルには異なる特徴があります。</p>
 
         <div class="bg-gray-50 rounded p-3 mb-6 text-sm">
@@ -16,61 +16,31 @@
         </div>
 
         <!-- Model Cards -->
-        <h3 class="font-medium mb-3">分類モデルを選択</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             {% for key, model in model_descriptions.items() %}
-            <label class="border rounded-lg p-4 cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition block"
-                   id="model-card-{{ key }}">
-                <div class="flex items-start">
-                    <input type="radio" name="classifier_type" value="{{ key }}"
-                           form="train-form"
-                           {% if key == 'logistic_regression' %}checked{% endif %}
-                           class="mt-1 mr-3"
-                           onchange="highlightModel('{{ key }}')">
-                    <div class="flex-1">
-                        <h4 class="font-semibold text-gray-800">{{ model.name }}</h4>
-                        <p class="text-sm text-gray-600 mt-1">{{ model.intuition }}</p>
-                        <details class="mt-2">
-                            <summary class="text-xs text-blue-600 cursor-pointer">仕組みを詳しく見る</summary>
-                            <p class="text-xs text-gray-500 mt-1">{{ model.formula_hint }}</p>
-                        </details>
-                        <p class="text-xs text-gray-500 mt-2">
-                            <span class="font-medium">適した分析：</span>{{ model.suitable_for }}
-                        </p>
-                    </div>
+            <div class="border rounded-lg p-5 hover:shadow-md transition bg-white">
+                <h3 class="font-semibold text-lg text-gray-800 mb-2">{{ model.name }}</h3>
+                <p class="text-sm text-gray-600 mb-4">{{ model.intuition }}</p>
+                <div class="flex gap-2">
+                    <form hx-post="/api/train" hx-swap="none" class="flex-1">
+                        <input type="hidden" name="classifier_type" value="{{ key }}">
+                        <button type="submit"
+                                class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm font-medium inline-flex items-center justify-center">
+                            このモデルを使う
+                            <svg class="htmx-indicator ml-2 animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </button>
+                    </form>
+                    <a href="/project/model/{{ key }}"
+                       class="flex-1 border border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition text-sm font-medium text-center">
+                        詳しく知りたい
+                    </a>
                 </div>
-            </label>
+            </div>
             {% endfor %}
         </div>
-
-        <!-- Class Names -->
-        <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-                クラス名（カンマ or 読点区切り、ラベル順）
-            </label>
-            <input type="text" name="class_names" required
-                   form="train-form"
-                   value="{{ suggested_classes | join(', ') }}"
-                   placeholder="例：フェイク, 本物"
-                   class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500">
-            <p class="text-sm text-gray-500 mt-1">
-                例：ラベル0 = フェイク、ラベル1 = 本物 の場合、「フェイク, 本物」と入力
-            </p>
-        </div>
-
-        <!-- Train Button -->
-        <form id="train-form"
-              hx-post="/api/train"
-              hx-swap="none">
-            <button type="submit"
-                    class="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition font-medium inline-flex items-center">
-                学習を開始
-                <svg class="htmx-indicator ml-2 animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-            </button>
-        </form>
 
         <!-- Error display area -->
         <div id="train-error" class="mt-4"></div>
@@ -80,18 +50,4 @@
         <a href="/project/data" class="text-gray-600 hover:text-gray-800 text-sm">戻る：データ選択</a>
     </div>
 </div>
-
-<script>
-function highlightModel(key) {
-    document.querySelectorAll('[id^="model-card-"]').forEach(function(card) {
-        card.classList.remove('border-blue-500', 'bg-blue-50');
-    });
-    var selected = document.getElementById('model-card-' + key);
-    if (selected) {
-        selected.classList.add('border-blue-500', 'bg-blue-50');
-    }
-}
-// Highlight default
-highlightModel('logistic_regression');
-</script>
 {% endblock %}
