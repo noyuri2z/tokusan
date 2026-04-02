@@ -18,6 +18,7 @@ class SessionState:
     training_data: Optional[Any] = None  # pandas DataFrame
     class_names: list = field(default_factory=list)
     classifier_type: str = "logistic_regression"
+    current_sample: Optional[str] = None
 
 
 class AppState:

@@ -1,0 +1,17 @@
+<div class="bg-green-50 border border-green-200 rounded-lg p-4">
+    <p class="text-green-800 font-semibold mb-2">データを読み込みました！</p>
+    <div class="text-sm text-gray-700 space-y-1">
+        <p><span class="font-medium">サンプル数：</span>{{ num_samples }}件</p>
+        <p><span class="font-medium">ラベル：</span>{{ unique_labels | join(', ') }}</p>
+    </div>
+    {% if suggested_classes %}
+    <div class="mt-2">
+        <span class="text-xs font-medium text-gray-500">推奨クラス名：</span>
+        <div class="flex flex-wrap gap-1 mt-1">
+            {% for cls in suggested_classes %}
+            <span class="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs">{{ cls }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>

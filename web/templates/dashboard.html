@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <h2 class="text-2xl font-bold text-gray-800">ダッシュボード</h2>
+        <a href="/project/data"
+           class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition font-medium">
+            新しいプロジェクトを作成
+        </a>
+    </div>
+
+    <!-- Saved Models -->
+    <section class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold mb-4">保存済みモデル</h3>
+
+        {% if models %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-4 py-3 text-left">モデル名</th>
+                        <th class="px-4 py-3 text-left">分類器</th>
+                        <th class="px-4 py-3 text-left">クラス名</th>
+                        <th class="px-4 py-3 text-left">作成日</th>
+                        <th class="px-4 py-3 text-right">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for model in models %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="px-4 py-3 font-medium">{{ model.name }}</td>
+                        <td class="px-4 py-3">{{ model_names.get(model.classifier_type, model.classifier_type) }}</td>
+                        <td class="px-4 py-3">
+                            <div class="flex flex-wrap gap-1">
+                                {% for cls in model.class_names %}
+                                <span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs">{{ cls }}</span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-gray-600">{{ model.created_at }}</td>
+                        <td class="px-4 py-3 text-right">
+                            <a href="/dashboard/load/{{ model.id }}"
+                               class="text-blue-600 hover:underline text-sm mr-3">読み込む</a>
+                            <form method="POST" action="/dashboard/delete/{{ model.id }}" class="inline">
+                                <button type="submit"
+                                        class="text-red-600 hover:underline text-sm"
+                                        onclick="return confirm('このモデルを削除しますか？')">削除</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-8 text-gray-500">
+            <p class="text-lg mb-2">まだ保存されたモデルがありません。</p>
+            <p class="text-sm">「新しいプロジェクトを作成」ボタンからテキスト分類を始めましょう。</p>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Progress Indicator -->
+    {% include "partials/progress.html" %}
+
+    <section class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-semibold mb-4">学習結果</h2>
+
+        {% if result.accuracy < 0.5 %}
+        <div class="bg-red-50 border border-red-200 rounded p-4 mb-6">
+            <p class="text-red-800 font-medium">警告：正解率が50%未満です。このデータはこの分析には適していない可能性があります。</p>
+        </div>
+        {% endif %}
+
+        <!-- Metrics Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-blue-50 p-4 rounded text-center">
+                <p class="text-sm text-gray-600">正解率</p>
+                <p class="text-2xl font-bold text-blue-600">{{ "%.1f"|format(result.accuracy * 100) }}%</p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded text-center">
+                <p class="text-sm text-gray-600">学習データ</p>
+                <p class="text-2xl font-bold">{{ result.train_size }}</p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded text-center">
+                <p class="text-sm text-gray-600">テストデータ</p>
+                <p class="text-2xl font-bold">{{ result.test_size }}</p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded text-center">
+                <p class="text-sm text-gray-600">クラス数</p>
+                <p class="text-lg font-bold">{{ result.class_names | length }}</p>
+            </div>
+        </div>
+
+        <!-- Classification Report Table -->
+        <h4 class="font-semibold mb-2 text-sm">クラス別の評価指標</h4>
+        <div class="overflow-x-auto mb-6">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-3 py-2 text-left">クラス</th>
+                        <th class="px-3 py-2 text-right">
+                            <span class="inline-flex items-center gap-1 justify-end">
+                                適合率
+                                <button type="button" class="metric-help-btn"
+                                        style="display:inline-flex;align-items:center;justify-content:center;width:1rem;height:1rem;border-radius:9999px;background:#9ca3af;color:#fff;font-size:0.7rem;line-height:1;cursor:pointer;border:none;padding:0;"
+                                        data-metric="precision">?</button>
+                            </span>
+                        </th>
+                        <th class="px-3 py-2 text-right">
+                            <span class="inline-flex items-center gap-1 justify-end">
+                                再現率
+                                <button type="button" class="metric-help-btn"
+                                        style="display:inline-flex;align-items:center;justify-content:center;width:1rem;height:1rem;border-radius:9999px;background:#9ca3af;color:#fff;font-size:0.7rem;line-height:1;cursor:pointer;border:none;padding:0;"
+                                        data-metric="recall">?</button>
+                            </span>
+                        </th>
+                        <th class="px-3 py-2 text-right">
+                            <span class="inline-flex items-center gap-1 justify-end">
+                                F1値
+                                <button type="button" class="metric-help-btn"
+                                        style="display:inline-flex;align-items:center;justify-content:center;width:1rem;height:1rem;border-radius:9999px;background:#9ca3af;color:#fff;font-size:0.7rem;line-height:1;cursor:pointer;border:none;padding:0;"
+                                        data-metric="f1">?</button>
+                            </span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for class_name in result.class_names %}
+                    {% if class_name in result.classification_report %}
+                    {% set metrics = result.classification_report[class_name] %}
+                    <tr class="border-b">
+                        <td class="px-3 py-2">{{ class_name }}</td>
+                        <td class="px-3 py-2 text-right">{{ "%.2f"|format(metrics.precision) }}</td>
+                        <td class="px-3 py-2 text-right">{{ "%.2f"|format(metrics.recall) }}</td>
+                        <td class="px-3 py-2 text-right">{{ "%.2f"|format(metrics['f1-score']) }}</td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Navigation -->
+    <div class="flex justify-between items-center">
+        <a href="/dashboard" class="text-gray-600 hover:text-gray-800 text-sm">ダッシュボードに戻る</a>
+        <a href="/project/play"
+           class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition font-medium">
+            新しいデータで試す
+        </a>
+    </div>
+</div>
+{% endblock %}

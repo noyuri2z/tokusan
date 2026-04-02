@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <!-- Hero Section -->
+    <div class="text-center mb-10">
+        <h2 class="text-4xl font-bold text-gray-800 mb-3">Tokusanで自然言語処理を学ぼう！</h2>
+        <p class="text-lg text-gray-600">
+            日本語テキストをAIで分類し、その仕組みを理解できる学習ツールです。<br>
+            データの選択からモデルの学習、予測結果の解釈まで、ステップごとにガイドします。
+        </p>
+    </div>
+
+    <!-- Login / Register Cards -->
+    <div class="flex border-b mb-0 justify-center">
+        <button id="tab-login"
+                onclick="switchAuthTab('login')"
+                class="px-6 py-3 text-sm font-medium border-b-2 -mb-px {% if active_tab != 'register' %}border-blue-600 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700{% endif %}">
+            ログイン
+        </button>
+        <button id="tab-register"
+                onclick="switchAuthTab('register')"
+                class="px-6 py-3 text-sm font-medium border-b-2 -mb-px {% if active_tab == 'register' %}border-blue-600 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700{% endif %}">
+            新規登録
+        </button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="panel-login" class="bg-white rounded-b-lg shadow p-8 max-w-md mx-auto {% if active_tab == 'register' %}hidden{% endif %}">
+        {% if login_error %}
+        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 text-sm">
+            {{ login_error }}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="/login" class="space-y-4">
+            <div>
+                <label for="login-username" class="block text-sm font-medium text-gray-700 mb-1">ユーザー名</label>
+                <input type="text" id="login-username" name="username" required
+                       value="{{ username or '' }}"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="ユーザー名を入力">
+            </div>
+            <div>
+                <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1">パスワード</label>
+                <input type="password" id="login-password" name="password" required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="パスワードを入力">
+            </div>
+            <button type="submit"
+                    class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition font-medium">
+                ログイン
+            </button>
+        </form>
+    </div>
+
+    <!-- Register Form -->
+    <div id="panel-register" class="bg-white rounded-b-lg shadow p-8 max-w-md mx-auto {% if active_tab != 'register' %}hidden{% endif %}">
+        {% if register_error %}
+        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 text-sm">
+            {{ register_error }}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="/register" class="space-y-4">
+            <div>
+                <label for="reg-username" class="block text-sm font-medium text-gray-700 mb-1">ユーザー名</label>
+                <input type="text" id="reg-username" name="username" required
+                       value="{{ username or '' }}"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="ユーザー名を入力（3文字以上）"
+                       minlength="3" maxlength="50">
+            </div>
+            <div>
+                <label for="reg-password" class="block text-sm font-medium text-gray-700 mb-1">パスワード</label>
+                <input type="password" id="reg-password" name="password" required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="パスワードを入力（6文字以上）"
+                       minlength="6">
+            </div>
+            <div>
+                <label for="reg-password-confirm" class="block text-sm font-medium text-gray-700 mb-1">パスワード（確認）</label>
+                <input type="password" id="reg-password-confirm" name="password_confirm" required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="パスワードを再入力"
+                       minlength="6">
+            </div>
+            <button type="submit"
+                    class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition font-medium">
+                登録
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+function switchAuthTab(tab) {
+    const tabs = ['login', 'register'];
+    tabs.forEach(t => {
+        const btn = document.getElementById('tab-' + t);
+        const panel = document.getElementById('panel-' + t);
+        if (t === tab) {
+            btn.classList.add('border-blue-600', 'text-blue-600');
+            btn.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700');
+            panel.classList.remove('hidden');
+        } else {
+            btn.classList.remove('border-blue-600', 'text-blue-600');
+            btn.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700');
+            panel.classList.add('hidden');
+        }
+    });
+}
+</script>
+{% endblock %}
