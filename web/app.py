@@ -586,10 +586,12 @@ async def train_model(
     # Auto-save model for the user
     await _save_model_for_user(user, session)
 
-    # Return HX-Redirect to results page
-    response = HTMLResponse(content="", status_code=200)
-    response.headers["HX-Redirect"] = "/project/results"
-    return response
+    # Redirect to results page
+    if request.headers.get("HX-Request"):
+        response = HTMLResponse(content="", status_code=200)
+        response.headers["HX-Redirect"] = "/project/results"
+        return response
+    return RedirectResponse("/project/results", status_code=302)
 
 
 @app.post("/api/predict", response_class=HTMLResponse)
