@@ -191,7 +191,7 @@ async def login_submit(request: Request, username: str = Form(...), password: st
 
     token = create_session_token(db_user["id"], db_user["username"])
     response = RedirectResponse("/dashboard", status_code=302)
-    response.set_cookie(COOKIE_NAME, token, httponly=True, max_age=86400)
+    response.set_cookie(COOKIE_NAME, token, httponly=True, max_age=86400 * 30)
     response.delete_cookie("session_id")
     return response
 
@@ -235,7 +235,7 @@ async def register_submit(
     # Auto-login
     token = create_session_token(user_id, username.strip())
     response = RedirectResponse("/dashboard", status_code=302)
-    response.set_cookie(COOKIE_NAME, token, httponly=True, max_age=86400)
+    response.set_cookie(COOKIE_NAME, token, httponly=True, max_age=86400 * 30)
     return response
 
 

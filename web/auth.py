@@ -11,7 +11,7 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 # Cookie signing
 SECRET_KEY = os.environ.get("TOKUSAN_SECRET_KEY", "tokusan-dev-secret-change-in-production")
 COOKIE_NAME = "auth_token"
-MAX_AGE = 86400  # 24 hours
+MAX_AGE = 86400 * 30  # 30 days
 
 _serializer = URLSafeTimedSerializer(SECRET_KEY)
 
