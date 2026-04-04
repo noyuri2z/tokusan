@@ -23,19 +23,19 @@
             <button id="tab-sample"
                     onclick="switchTab('sample')"
                     class="px-4 py-2 text-sm font-medium border-b-2 border-blue-600 text-blue-600 -mb-px">
-                サンプルデータを使用
+                身近な疑問から選ぶ
             </button>
             <button id="tab-upload"
                     onclick="switchTab('upload')"
                     class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 -mb-px">
-                CSVをアップロード
+                自分でテーマを選ぶ
             </button>
         </div>
 
         <!-- Panel: Sample data -->
         <div id="panel-sample">
             <p class="text-sm text-gray-600 mb-4">
-                デモ用のサンプルデータを選んで読み込んでください。
+                答えてみたい疑問を選んでください。
             </p>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {% for key, sample in samples.items() %}
@@ -45,7 +45,7 @@
                      hx-swap="innerHTML"
                      onclick="selectSample('{{ key }}')">
                     <h4 class="font-medium text-gray-800">{{ sample.title }}</h4>
-                    <p class="text-xs text-gray-500 mt-1">{{ sample.sample_count }}件のサンプル</p>
+                    <p class="text-xs text-gray-600 mt-1">{{ sample.subtitle }}</p>
                 </div>
                 {% endfor %}
             </div>
@@ -63,6 +63,15 @@
 
         <!-- Panel: CSV upload -->
         <div id="panel-upload" class="hidden">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    分析のテーマ（どんな疑問に答えたいですか？）
+                </label>
+                <input type="text" id="custom-theme-input"
+                       class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                       placeholder="例：商品レビューからユーザーの満足度を判定するには？">
+                <p class="text-xs text-gray-500 mt-1">AIがこのテーマを踏まえて分類結果を解釈します。</p>
+            </div>
             <form id="upload-form"
                   hx-post="/api/upload"
                   hx-target="#data-info"
@@ -95,9 +104,10 @@
     <!-- Next Button -->
     <div class="flex justify-between items-center">
         <a href="/dashboard" class="text-gray-600 hover:text-gray-800 text-sm">ダッシュボードに戻る</a>
-        <form method="POST" action="/project/data/confirm" onsubmit="document.getElementById('project-name-hidden').value = document.getElementById('project-name-input').value; var cn = document.getElementById('class-names-input'); if (cn) document.getElementById('class-names-hidden').value = cn.value;">
+        <form method="POST" action="/project/data/confirm" onsubmit="document.getElementById('project-name-hidden').value = document.getElementById('project-name-input').value; var cn = document.getElementById('class-names-input'); if (cn) document.getElementById('class-names-hidden').value = cn.value; var ct = document.getElementById('custom-theme-input'); if (ct) document.getElementById('theme-hidden').value = ct.value;">
             <input type="hidden" name="project_name" id="project-name-hidden" value="">
             <input type="hidden" name="class_names" id="class-names-hidden" value="">
+            <input type="hidden" name="theme" id="theme-hidden" value="">
             <button type="submit"
                     id="next-btn"
                     class="bg-blue-600 text-white px-8 py-2 rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"

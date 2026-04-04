@@ -326,6 +326,7 @@ async def project_data(request: Request):
     session.classifier_type = "logistic_regression"
     session.current_sample = None
     session.project_name = None
+    session.theme = None
 
     return templates.TemplateResponse(
         request,
@@ -357,6 +358,7 @@ async def project_data_confirm(
     request: Request,
     project_name: str = Form(""),
     class_names: str = Form(""),
+    theme: str = Form(""),
 ):
     """Validate data exists and proceed to model selection."""
     user = require_auth(request)
@@ -371,6 +373,12 @@ async def project_data_confirm(
     names = [n.strip() for n in re.split(r"[,、]", class_names) if n.strip()]
     if names:
         session.class_names = names
+
+    # Save theme: use custom input, or fall back to sample dataset title
+    if theme.strip():
+        session.theme = theme.strip()
+    elif session.current_sample and session.current_sample in SAMPLE_DATASETS:
+        session.theme = SAMPLE_DATASETS[session.current_sample]["title"]
 
     return RedirectResponse("/project/model", status_code=302)
 
@@ -630,6 +638,7 @@ async def predict_text(
         explain=True,
         use_ai=True,
         fallback_to_template=True,
+        theme=session.theme,
     )
 
     max_weight = 1.0

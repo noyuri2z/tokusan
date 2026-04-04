@@ -46,6 +46,7 @@ class GeminiInterpreter:
         probabilities: Dict[str, float],
         word_weights: List[Tuple[str, float]],
         class_names: List[str],
+        theme: Optional[str] = None,
     ) -> str:
         """Build the prompt for Gemini."""
         prob_str = ", ".join(
@@ -65,11 +66,15 @@ class GeminiInterpreter:
         if len(text) > max_text_len:
             display_text += "...(省略)"
 
+        theme_section = ""
+        if theme:
+            theme_section = f"\n## 分析テーマ\n{theme}\n"
+
         prompt = f"""あなたは日本語のテキスト分類結果を解釈する専門家です。
 
 以下の分類結果を分析し、なぜこのテキストが「{predicted_class}」と判定されたのかを
 日本語で分かりやすく説明してください。
-
+{theme_section}
 ## 入力テキスト
 {display_text}
 
@@ -86,8 +91,9 @@ class GeminiInterpreter:
 1. まず、予測結果と確信度を1文で簡潔に述べてください
 2. 重みの高い単語（正負両方）を分析し、なぜそれらの単語がこの分類に影響したのかを解釈してください。データセットの特徴なども踏まえて説明してください。
 3. 単語の組み合わせや文脈も考慮して、総合的な判定理由を説明してください。
-4. 専門用語を避け、一般の人にも分かりやすい日本語で説明してください
-5. 段落分けで読みやすくしてください（マークダウン記号や*、#、-などの記号は使用しないでください）
+4. 分析テーマが提示されている場合は、そのテーマ（疑問）に答える形で解釈を行ってください。
+5. 専門用語を避け、一般の人にも分かりやすい日本語で説明してください
+6. 段落分けで読みやすくしてください（マークダウン記号や*、#、-などの記号は使用しないでください）
 
 日本語で回答してください。
 """
@@ -101,6 +107,7 @@ class GeminiInterpreter:
         probabilities: Dict[str, float],
         word_weights: List[Tuple[str, float]],
         class_names: List[str],
+        theme: Optional[str] = None,
     ) -> str:
         """Generate a Japanese interpretation of the classification result."""
         client = self._get_client()
@@ -110,6 +117,7 @@ class GeminiInterpreter:
             probabilities=probabilities,
             word_weights=word_weights,
             class_names=class_names,
+            theme=theme,
         )
 
         response = client.models.generate_content(
