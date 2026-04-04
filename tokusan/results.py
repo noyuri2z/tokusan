@@ -251,6 +251,7 @@ class PredictionResult:
     explanation: Optional[ExplanationResult] = None
     use_ai: Optional[bool] = None
     fallback_to_template: bool = True
+    theme: Optional[str] = None
 
     @property
     def confidence(self) -> float:
@@ -305,6 +306,7 @@ class PredictionResult:
             probabilities=self.probabilities,
             word_weights=self.explanation.word_weights if self.explanation else [],
             class_names=self.class_names,
+            theme=self.theme,
         )
 
     @property

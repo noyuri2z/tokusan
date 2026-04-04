@@ -2,7 +2,8 @@
 
 SAMPLE_DATASETS = {
     "fakenews": {
-        "title": "AI記事の判定",
+        "title": "AIと人間の文章を見分けるには？",
+        "subtitle": "GPT-2が生成した記事と人間が書いた記事のデータセットを使って、この疑問に答えてみましょう！",
         "file": "ai_article_sample.csv",
         "sample_count": 8355,
         "suggested_classes": ["AI", "人間"],
@@ -10,7 +11,8 @@ SAMPLE_DATASETS = {
         "analysis_hint": "記事の文体や表現パターンからAIの文章パターンを検出することができます。",
     },
     "ramen": {
-        "title": "ラーメンレビュー評価",
+        "title": "お店の評価を予測するには？",
+        "subtitle": "東京都内のラーメン店レビューのデータセットを使って、この疑問に答えてみましょう！",
         "file": "ramen_review_sample.csv",
         "sample_count": 1000,
         "suggested_classes": ["低評価", "高評価"],
@@ -18,7 +20,8 @@ SAMPLE_DATASETS = {
         "analysis_hint": "データの偏り（クラス不均衡）がモデルの判定にどう影響するかを体験できます。少数派クラスの再現率に注目してみましょう。",
     },
     "wrime": {
-        "title": "感情分析（WRIME）",
+        "title": "SNSの文章から感情を読み取るには？",
+        "subtitle": "日本語SNS投稿の感情データセット（WRIME）を使って、この疑問に答えてみましょう！",
         "file": "wrime_sample.csv",
         "sample_count": 1175,
         "suggested_classes": ["喜び", "悲しみ", "期待", "驚き", "怒り", "恐れ", "嫌悪", "信頼"],
@@ -26,7 +29,8 @@ SAMPLE_DATASETS = {
         "analysis_hint": "テキストに含まれる感情表現を分析し、書き手の感情状態を自動的に推定できます。多クラス分類の良い練習になります。",
     },
     "spam": {
-        "title": "迷惑メール分類",
+        "title": "迷惑メールを見分けるには？",
+        "subtitle": "通常メールと迷惑メールのデータセットを使って、この疑問に答えてみましょう！",
         "file": "spam_sample.csv",
         "sample_count": 500,
         "suggested_classes": ["通常メール", "迷惑メール"],

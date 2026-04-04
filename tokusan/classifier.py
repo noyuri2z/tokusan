@@ -206,6 +206,7 @@ class JapaneseTextClassifier:
         num_samples: int = 500,
         use_ai: Optional[bool] = None,
         fallback_to_template: bool = True,
+        theme: Optional[str] = None,
     ) -> PredictionResult:
         """Classify a single text with optional LIME explanation and AI interpretation."""
         if not self.is_trained or self._pipeline is None:
@@ -237,6 +238,7 @@ class JapaneseTextClassifier:
             explanation=explanation,
             use_ai=use_ai,
             fallback_to_template=fallback_to_template,
+            theme=theme,
         )
 
     def predict_batch(
