@@ -553,23 +553,29 @@ async def train_model(
     user = require_auth(request)
     session = _get_session_for_user(user)
 
+    is_htmx = request.headers.get("HX-Request")
+
     if session.training_data is None:
-        return _error_response(
-            request,
-            error="学習データがアップロードされていません。まずCSVをアップロードしてください。",
-            hint="データ選択ページからCSVをアップロードしてください。",
-        )
+        if is_htmx:
+            return _error_response(
+                request,
+                error="学習データがアップロードされていません。まずCSVをアップロードしてください。",
+                hint="データ選択ページからCSVをアップロードしてください。",
+            )
+        return RedirectResponse("/project/data", status_code=302)
 
     names = [n.strip() for n in re.split(r"[,、]", class_names) if n.strip()]
     # Fallback to session class_names if not provided in form
     if not names and session.class_names:
         names = session.class_names
     if len(names) < 2:
-        return _error_response(
-            request,
-            error="クラス名を2つ以上入力してください。",
-            hint="カンマ区切りで2つ以上のクラス名を入力してください。",
-        )
+        if is_htmx:
+            return _error_response(
+                request,
+                error="クラス名を2つ以上入力してください。",
+                hint="カンマ区切りで2つ以上のクラス名を入力してください。",
+            )
+        return RedirectResponse("/project/data", status_code=302)
 
     clf = JapaneseTextClassifier(
         class_names=names, classifier_type=classifier_type
@@ -587,7 +593,7 @@ async def train_model(
     await _save_model_for_user(user, session)
 
     # Redirect to results page
-    if request.headers.get("HX-Request"):
+    if is_htmx:
         response = HTMLResponse(content="", status_code=200)
         response.headers["HX-Redirect"] = "/project/results"
         return response

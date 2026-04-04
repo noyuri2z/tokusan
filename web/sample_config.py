@@ -12,10 +12,10 @@ SAMPLE_DATASETS = {
     "ramen": {
         "title": "ラーメンレビュー評価",
         "file": "ramen_review_sample.csv",
-        "sample_count": 600,
-        "suggested_classes": ["低評価", "中評価", "高評価"],
-        "description": "東京都内のラーメン店600件分のレビューデータセットです。レビュー評価の感情分析に活用できます。",
-        "analysis_hint": "レビュー中の表現や感情的な言葉遣いから、評価の傾向を自動的に判定できます。",
+        "sample_count": 1000,
+        "suggested_classes": ["低評価", "高評価"],
+        "description": "東京都内のラーメン店1000件分のレビューデータセットです。データが偏っている（高評価80%、低評価20%）ため、分類精度への影響を学ぶのに適しています。",
+        "analysis_hint": "データの偏り（クラス不均衡）がモデルの判定にどう影響するかを体験できます。少数派クラスの再現率に注目してみましょう。",
     },
     "wrime": {
         "title": "感情分析（WRIME）",
